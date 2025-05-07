@@ -28,12 +28,62 @@
       }
 
       html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Nasalization",sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+      
+      /* VIGNETTE / FADE-TO-BLACK NACH OBEN */
+      body::before {
+          content: "";
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 30vh; /* Höhe des Fade-Bereichs, anpassen */
+          background: linear-gradient(to bottom, 
+              rgba(0,0,0,1) 0%,    
+              rgba(0,0,0,0.85) 40%, 
+              rgba(0,0,0,0) 100%   
+          );
+          z-index: 1; 
+          pointer-events: none; 
+      }
+
       .glow{color:#fff;text-shadow:0 0 8px var(--glow),0 0 20px var(--glow)}
-      #matrixCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+      
+      #matrixCanvas{
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 0; /* Unter dem Fade */
+      }
       .glass{backdrop-filter:blur(22px)saturate(180%);-webkit-backdrop-filter:blur(22px)saturate(180%);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:28px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-      #top-window{position:fixed;top:8vh;left:50%;transform:translateX(-50%);width:clamp(240px,70%,680px);padding:18px 32px;text-align:center;z-index:10}
+      
+      #top-window{
+          position:fixed;
+          top:8vh;
+          left:50%;
+          transform:translateX(-50%);
+          width:clamp(240px,70%,680px);
+          padding:18px 32px;
+          text-align:center;
+          z-index:10; /* Über dem Fade */
+      }
       #top-window h1{margin:0;font-size:clamp(1.4rem,4vw,2.8rem)}
-      #controls-window{position:fixed;bottom:6vh;left:50%;transform:translateX(-50%);width:clamp(340px, 88%, 580px);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:clamp(15px, 3vw, 30px);z-index:10}
+      
+      #controls-window{
+          position:fixed;
+          bottom:6vh;
+          left:50%;
+          transform:translateX(-50%);
+          width:clamp(340px, 88%, 580px);
+          /* DÄMPFER / PADDING HINZUGEFÜGT */
+          padding: 15px clamp(20px, 5vw, 35px); 
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:clamp(15px, 3vw, 30px);
+          z-index:10; /* Über dem Fade */
+      }
       
       .joystick-ring{
         position:relative;
@@ -154,72 +204,6 @@
             speedBar.style.height = '0px';
         }
         
-        // Haptisches Feedback (mit Debugging-Logs)
-        function triggerHapticFeedback(pattern = 50) {
-            console.log("[Haptic] Attempting with pattern:", pattern);
-            if ('vibrate' in navigator) {
-                console.log("[Haptic] navigator.vibrate IS available.");
-                try {
-                    navigator.vibrate(pattern); // Rückgabewert ist oft boolean oder undefined, nicht immer nützlich
-                    console.log("[Haptic] Vibration command sent.");
-                } catch (e) {
-                    console.error("[Haptic] Vibration FAILED with error:", e);
-                }
-            } else {
-                console.warn("[Haptic] navigator.vibrate IS NOT available.");
-            }
-        }
-
-        // Auditives Feedback (NEU)
-        let audioCtx; // Wird beim ersten Klick initialisiert (Browser-Policy)
-        function playClickSound(type = 'soft') {
-            if (!audioCtx) { // Erstelle AudioContext bei der ersten Benutzerinteraktion
-                 try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                } catch (e) {
-                    console.warn("Web Audio API is not supported in this browser.");
-                    return;
-                }
-            }
-             if (!audioCtx) return; // Falls Erstellung immer noch fehlschlägt
-
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Leiser machen
-
-            if (type === 'soft') {
-                oscillator.type = 'sine'; // Weicher Ton
-                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // Frequenz für Klick
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.05);
-            } else if (type === 'snap') {
-                oscillator.type = 'triangle';
-                oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.03);
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.03);
-            }
-        }
-        // Um AudioContext bei erster Interaktion zu ermöglichen (wichtig für Autoplay Policy)
-        function initAudioContext() {
-            if (!audioCtx) {
-                 try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    console.log("AudioContext initialized on user interaction.");
-                } catch (e) {
-                    console.warn("Web Audio API is not supported in this browser.");
-                }
-            }
-        }
-        document.body.addEventListener('click', initAudioContext, { once: true });
-        document.body.addEventListener('touchstart', initAudioContext, { once: true });
-
-
         function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
         let snapIndex=0,drag=false; 
         function snap(i){
@@ -231,9 +215,7 @@
           blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=i));
           
           if (oldSnapIndex !== snapIndex) {
-              console.log("Snap index changed, calling feedback.");
-              triggerHapticFeedback(30); 
-              playClickSound('snap'); // Auditiver Klick für Snap
+              console.log("Snap index changed.");
           }
 
           const currentBlock = blocks[i];
@@ -268,10 +250,7 @@
         
         function startDrag(e) { 
             if(blocks.length===0) return; 
-            initAudioContext(); // Sicherstellen, dass AudioContext initialisiert ist
-            console.log("Drag started on speedbar/thumb, calling feedback.");
-            triggerHapticFeedback(50); 
-            playClickSound('soft'); // Auditiver Klick für Drag-Start
+            console.log("Drag started on speedbar/thumb.");
             drag=true;
             arrow.style.display='none';
             moveDrag(e); 
@@ -341,10 +320,7 @@
         
         joy.addEventListener('touchstart',e=>{
             e.preventDefault(); 
-            initAudioContext(); // Sicherstellen, dass AudioContext initialisiert ist
-            console.log("Joystick touchstart, calling feedback.");
-            triggerHapticFeedback(50); 
-            playClickSound('soft'); // Auditiver Klick für Joystick-Touch
+            console.log("Joystick touchstart.");
             for(const t of e.changedTouches)if(act===null){act=t.identifier;mv(t.clientX,t.clientY);}
         },{passive:false});
         window.addEventListener('touchmove',e=>{if(act !== null && e.touches){for(const t of e.touches)if(t.identifier===act){mv(t.clientX,t.clientY); e.preventDefault();}}}, {passive:false});
@@ -352,10 +328,7 @@
         
         joy.addEventListener('mousedown',e=>{
             act='mouse';
-            initAudioContext(); // Sicherstellen, dass AudioContext initialisiert ist
-            console.log("Joystick mousedown, calling feedback.");
-            triggerHapticFeedback(50); 
-            playClickSound('soft'); // Auditiver Klick für Joystick-Click
+            console.log("Joystick mousedown.");
             mv(e.clientX,e.clientY); 
             e.preventDefault();
         });
