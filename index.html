@@ -35,10 +35,10 @@
           top: 0;
           left: 0;
           width: 100%;
-          height: 15vh; /* VIGNETTE HALBIERT (vorher 30vh) */
+          height: 15vh; 
           background: linear-gradient(to bottom, 
               rgba(0,0,0,1) 0%,    
-              rgba(0,0,0,0.9) 50%, /* Stärkerer Fade am Anfang */
+              rgba(0,0,0,0.9) 50%, 
               rgba(0,0,0,0) 100%   
           );
           z-index: 1; 
@@ -71,12 +71,12 @@
       
       #controls-window{
           position:fixed;
-          bottom:6vh;
+          bottom: 9vh; /* ERHÖHT für mehr Abstand zur unteren Browser-UI */
           left:50%;
           transform:translateX(-50%);
-          width:clamp(340px, 88%, 580px);
+          width:clamp(330px, 85%, 550px); /* Breite leicht reduziert für mehr Randplatz */
           /* Padding für "Dämpfer", wirkt auf Speedbar und Joystick */
-          padding: 15px clamp(20px, 5vw, 35px); 
+          padding: 15px clamp(25px, 6vw, 40px); /* Horizontales Padding leicht erhöht */
           display:flex;
           justify-content:space-between; 
           align-items:center;
@@ -100,7 +100,6 @@
       #speedbar{
         position:relative;
         display:inline-block; 
-        /* Kein direktes Padding hier, wird durch #controls-window Padding erreicht */
       }
       .speed-block{
         border-radius:6px;background:var(--speed-gray);transition:background .15s;
@@ -108,7 +107,7 @@
       }
       .speed-block.active{background:var(--speed-red)}
       #speed-thumb{position:absolute;width:6px;height:28px;background:#bbb;border-radius:3px;transition:transform .15s;transform-origin: center center;}
-      #drag-arrow{position:absolute;font-size:14px;color:#aaa;animation:bounce 1.2s infinite ease-in-out;transform-origin:center bottom;}
+      #drag-arrow{position:absolute;font-size:14px;color:#aaa;animation:bounce 1.2s infinite ease-in-out;transform-origin:center bottom; display: none;} /* Initial versteckt */
       @keyframes bounce{0%,100%{transform:translate(-50%, -50%) translateY(0) scaleY(1)}50%{transform:translate(-50%, -50%) translateY(-8px) scaleY(1.3)}}
     </style>
   </head>
@@ -205,18 +204,28 @@
         }
         
         function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
-        let snapIndex=0,drag=false; 
+        let snapIndex=-1; // Initialisiere mit einem ungültigen Index, damit der erste Snap den Pfeil korrekt setzt
+        let drag=false; 
+
+        function updateArrowVisibility() {
+            if (drag === false && snapIndex === 0 && blocks.length > 0) { // Block 0 ist der unterste
+                arrow.style.display = 'block';
+            } else {
+                arrow.style.display = 'none';
+            }
+        }
+
         function snap(i){
           if (i < 0 || i >= blocks.length) return; 
           
-          const oldSnapIndex = snapIndex;
+          // const oldSnapIndex = snapIndex; // Nicht mehr direkt hier für Pfeil benötigt
           snapIndex=i;
           
           blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=i));
           
-          if (oldSnapIndex !== snapIndex) {
-              console.log("Snap index changed.");
-          }
+          // Pfeilsichtbarkeit wird jetzt von updateArrowVisibility() und endDrag() gehandhabt
+          updateArrowVisibility();
+
 
           const currentBlock = blocks[i];
           const blockRect = currentBlock.getBoundingClientRect();
@@ -234,32 +243,34 @@
           
           thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(${thumbAngle}deg)`;
           
-          let arrowX = thumbTargetX; 
-          let arrowY = thumbTargetY; 
-          const arrowSpacing = 15; 
+          // Pfeilpositionierung nur wenn er sichtbar sein soll (redundant, da display:none ihn eh unsichtbar macht, aber schadet nicht)
+          if (arrow.style.display === 'block') {
+            let arrowX = thumbTargetX; 
+            let arrowY = thumbTargetY; 
+            const arrowSpacing = 15; 
 
-          if (blockRotation === 0) { 
-             arrowX = thumbTargetX; 
-             arrowY = thumbTargetY - (thumb.offsetHeight / 2) - arrowSpacing; 
+            if (blockRotation === 0) { 
+                arrowX = thumbTargetX; 
+                arrowY = thumbTargetY - (thumb.offsetHeight / 2) - arrowSpacing; 
+            }
+            arrow.style.left = `${arrowX}px`; 
+            arrow.style.top = `${arrowY}px`;
           }
-          arrow.style.left = `${arrowX}px`; 
-          arrow.style.top = `${arrowY}px`;
         }
 
         function closest(x,y){if(blocks.length===0) return -1; const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
         
         function startDrag(e) { 
             if(blocks.length===0) return; 
-            console.log("Drag started on speedbar/thumb.");
             drag=true;
-            arrow.style.display='none';
+            arrow.style.display='none'; // Pfeil beim Ziehen immer ausblenden
             moveDrag(e); 
             e.preventDefault();
         }
         function endDrag() {
             if(blocks.length===0) return; 
             drag=false; 
-            arrow.style.display='block';
+            updateArrowVisibility(); // Pfeilsichtbarkeit basierend auf snapIndex aktualisieren
         }
         function moveDrag(e) {
             if(!drag || blocks.length===0)return;
@@ -278,7 +289,12 @@
         window.addEventListener('touchmove',moveDrag,{passive:false});
         window.addEventListener('touchend',endDrag);
         
-        if (blocks.length > 0) snap(0); else { thumb.style.display = 'none'; arrow.style.display = 'none'; }
+        if (blocks.length > 0) {
+            snap(0); // Initial zum untersten Block snappen
+        } else { 
+            thumb.style.display = 'none'; 
+            arrow.style.display = 'none'; 
+        }
 
         /* === JOYSTICK === */
         const joy = document.getElementById('right-joystick'); 
@@ -287,21 +303,12 @@
 
         const ctr = () => {
             const joyRect = joy.getBoundingClientRect(); 
-            const stickRect = stick.getBoundingClientRect(); // Brauchen wir für den Stick-Radius
+            const stickRect = stick.getBoundingClientRect(); 
 
-            // Radius des inneren Kreises (.joystick)
             const joyRadius = joyRect.width / 2;
-            // Radius des Knüppels (.stick)
             const stickRadius = stickRect.width / 2;
-
-            // Maximaler Abstand des Mittelpunkts des Sticks vom Zentrum:
-            // Radius des .joystick + 1/3 des Stick-Radius (damit 2/3 des Sticks innerhalb bleiben, 1/3 übersteht)
-            // Oder anders gesagt: Der Mittelpunkt des Sticks kann sich bis zum Rand des inneren Kreises bewegen,
-            // plus einen Überstand, der (Radius_Stick / 3) entspricht.
-            // Damit der *Rand* des Sticks 1/3 *seines Radius* über den Rand des inneren Kreises hinausragt,
-            // muss sich der *Mittelpunkt* des Sticks um (Radius_innerer_Kreis + 1/3 * Radius_Stick) bewegen können.
+            
             const maxDistance = joyRadius + (stickRadius / 3);
-            // const maxDistance = joyRadius + (stickRadius * (2/3)); // wenn 1/3 des Durchmessers überstehen soll
 
             return {
                 x: joyRect.left + joyRadius,  
@@ -323,7 +330,6 @@
         
         joy.addEventListener('touchstart',e=>{
             e.preventDefault(); 
-            console.log("Joystick touchstart.");
             for(const t of e.changedTouches)if(act===null){act=t.identifier;mv(t.clientX,t.clientY);}
         },{passive:false});
         window.addEventListener('touchmove',e=>{if(act !== null && e.touches){for(const t of e.touches)if(t.identifier===act){mv(t.clientX,t.clientY); e.preventDefault();}}}, {passive:false});
@@ -331,7 +337,6 @@
         
         joy.addEventListener('mousedown',e=>{
             act='mouse';
-            console.log("Joystick mousedown.");
             mv(e.clientX,e.clientY); 
             e.preventDefault();
         });
