@@ -6,7 +6,7 @@
 
     <title>SURGE‑WebControl</title>
 
-    <!-- Nasalization Font (CDN + fallback) -->
+    <!-- Nasalization Font -->
     <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet" />
     <style>
       @font-face {
@@ -21,7 +21,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-bugHuflTqEZZ2uRiKqdF6RxQ9WG/jc2LGJtIDiCGk4BmSL7xIuiKdVhK1hO6Jp5ablZGjDVqdDriLetr7vV0Lg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
-      :root { --accent: #24fff4; }
+      :root {
+        --matrix: #24fff4;
+        --glow  : #ffffff;
+        --speed-gray: rgba(255,255,255,0.25);
+        --speed-red : #ff4040;
+      }
 
       /* ---------- GLOBAL ---------- */
       html, body {
@@ -33,179 +38,177 @@
         overflow: hidden;
         -webkit-font-smoothing: antialiased;
       }
-      .glow {
-        text-shadow: 0 0 6px var(--accent), 0 0 14px var(--accent), 0 0 28px var(--accent);
-        letter-spacing: .06em;
-      }
+      .glow { text-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow), 0 0 32px var(--glow); letter-spacing: .06em; }
 
-      /* ---------- CANVAS ---------- */
-      #matrixCanvas {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 0;
-      }
+      /* ---------- CANVAS (DIGITAL RAIN) ---------- */
+      #matrixCanvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
-      /* ---------- GLASS COMPONENTS ---------- */
+      /* ---------- BLUR‑GLASS ---------- */
       .glass {
-        backdrop-filter: blur(28px) saturate(160%);
-        -webkit-backdrop-filter: blur(28px) saturate(160%);
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 24px;
-        box-shadow: 0 4px 22px rgba(0, 0, 0, 0.45);
-        z-index: 10;
+        backdrop-filter: blur(22px) saturate(180%);
+        -webkit-backdrop-filter: blur(22px) saturate(180%);
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.28);
+        border-radius: 28px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.45);
       }
 
-      header {
-        position: fixed;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        align-items: center;
-        gap: 24px;
-        padding: 10px 28px;
-      }
-      header h1 { font-size: clamp(1.8rem, 4vw, 3.6rem); margin: 0; }
-      .icons { display: flex; gap: 18px; font-size: 1.4rem; }
-      .icons i { cursor: pointer; transition: transform .18s; }
-      .icons i:hover { transform: scale(1.15); color: var(--accent); }
+      /* TOP BAR */
+      #top-window { position: fixed; top: 8vh; left: 50%; transform: translateX(-50%); width: clamp(240px, 70%, 680px); padding: 18px 32px; text-align: center; z-index: 10; }
+      #top-window h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2.8rem); }
 
-      /* ---------- JOYSTICKS ---------- */
-      .joystick {
-        position: fixed;
-        width: clamp(120px, 18vw, 200px);
-        aspect-ratio: 1/1;
-        border-radius: 50%;
-        touch-action: none;
-        overflow: hidden;
-      }
-      #left-joystick  { bottom: 24px; left: 24px; }
-      #right-joystick { bottom: 24px; right: 24px; }
+      /* CONTROL BAR */
+      #controls-window { position: fixed; bottom: 6vh; left: 50%; transform: translateX(-50%); width: clamp(340px, 92%, 1200px); padding: clamp(30px, 5vw, 50px); display: flex; justify-content: space-between; align-items: center; gap: clamp(40px, 8vw, 100px); z-index: 10; }
 
-      .stick {
-        --size: 40%;
-        width: var(--size);
-        height: var(--size);
-        background: var(--accent);
-        border-radius: 50%;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        touch-action: none;
-        box-shadow: 0 0 12px 4px var(--accent);
-        transition: transform .05s linear;
-      }
+      /* ---------- JOYSTICK + RING ---------- */
+      .joystick-ring { position: relative; flex: 0 0 clamp(220px, 38vw, 320px); aspect-ratio: 1 / 1; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+      .joystick-ring::before { /* extra blur ring overlay */ content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; backdrop-filter: inherit; -webkit-backdrop-filter: inherit; box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
+
+      .joystick { position: relative; width: 62%; aspect-ratio: 1 / 1; border-radius: 50%; overflow: hidden; touch-action: none; }
+      .stick   { --size: 45%; width: var(--size); height: var(--size); background: var(--glow); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); touch-action: none; box-shadow: 0 0 16px 6px var(--glow); transition: transform 0.05s linear; }
+
+      /* ---------- SPEED BAR ---------- */
+      #speedbar { position: relative; width: clamp(120px, 22vw, 260px); height: clamp(160px, 40vh, 320px); display: flex; }
+      /* grid container to place vertical + horizontal */
+      #speedbar .vertical   { display: flex; flex-direction: column-reverse; justify-content: flex-start; gap: 14px; }
+      #speedbar .horizontal { display: flex; flex-direction: row; gap: 14px; margin-left: 14px; margin-top: -4px; }
+
+      .speed-block { width: 34px; height: 22px; border-radius: 6px; background: var(--speed-gray); transition: background .15s; }
+      .speed-block.active { background: var(--speed-red); }
+
+      /* Slider bar */
+      #speed-thumb { position: absolute; width: 6px; height: 26px; background: #aaa; border-radius: 3px; left: -12px; bottom: 0; transition: top .15s, left .15s, bottom .15s; }
+
+      /* Bounce arrow */
+      #drag-arrow { position: absolute; left: -14px; bottom: 34px; font-size: 14px; color: #aaa; animation: bounce 1.3s infinite ease-in-out; transform-origin: center bottom; }
+      @keyframes bounce { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-8px) scaleY(1.3);} }
     </style>
   </head>
+
   <body>
-    <!-- BACKGROUND EFFECT -->
     <canvas id="matrixCanvas"></canvas>
 
-    <!-- HEADER -->
-    <header class="glass">
-      <h1 class="glow">SURGE‑WebControl</h1>
-      <div class="icons">
-        <i class="fa-solid fa-bluetooth-b" aria-label="Bluetooth"></i>
-        <i class="fa-solid fa-gear" aria-label="Einstellungen"></i>
-      </div>
-    </header>
+    <div id="top-window" class="glass"><h1 class="glow">SURGE‑WebControl</h1></div>
 
-    <!-- JOYSTICKS -->
-    <div class="joystick glass" id="left-joystick"><div class="stick" id="left-stick"></div></div>
-    <div class="joystick glass" id="right-joystick"><div class="stick" id="right-stick"></div></div>
+    <div id="controls-window" class="glass">
+      <!-- SPEED BAR L‑shape -->
+      <div id="speedbar">
+        <div class="vertical"></div>
+        <div class="horizontal"></div>
+        <div id="speed-thumb"></div>
+        <div id="drag-arrow">▲</div>
+      </div>
+      <!-- RIGHT JOYSTICK WITH RING -->
+      <div class="joystick-ring glass">
+        <div class="joystick" id="right-joystick"><div class="stick" id="right-stick"></div></div>
+      </div>
+    </div>
 
     <script>
-      /* -------- DIGITAL RAIN (1/3 speed) -------- */
+      /* -------------- BUILD SPEED BAR BLOCKS -------------- */
+      const verticalCount   = 4;
+      const horizontalCount = 4;
+      const vertContainer   = document.querySelector('#speedbar .vertical');
+      const horzContainer   = document.querySelector('#speedbar .horizontal');
+      const allBlocks       = [];
+
+      for (let i = 0; i < verticalCount; i++) {
+        const b = document.createElement('div'); b.className = 'speed-block'; vertContainer.appendChild(b); allBlocks.push(b);
+      }
+      for (let i = 0; i < horizontalCount; i++) {
+        const b = document.createElement('div'); b.className = 'speed-block'; horzContainer.appendChild(b); allBlocks.push(b);
+      }
+
+      /* -------------- SPEED THUMB INTERACTION -------------- */
+      const thumb  = document.getElementById('speed-thumb');
+      const arrow  = document.getElementById('drag-arrow');
+      const bar    = document.getElementById('speedbar');
+      let dragging = false;
+      const blockCenters = () => allBlocks.map(b => { const r = b.getBoundingClientRect(); return { b, x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+
+      function snapTo(index) {
+        // mark active blocks red up to index
+        allBlocks.forEach((b,i)=> b.classList.toggle('active', i <= index));
+        // move thumb to side of selected block
+        const r = allBlocks[index].getBoundingClientRect();
+        const barRect = bar.getBoundingClientRect();
+        const offsetX = (index < verticalCount) ? -12 : -6 + (index - verticalCount + 1)*48; // adjust for horizontal shift
+        const offsetY = (index < verticalCount) ? (verticalCount-1-index)*36 : -12;
+        thumb.style.left  = offsetX + 'px';
+        thumb.style.bottom = (0 + index*0) + 'px';
+        // simpler: absolute within bar using transform
+        thumb.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+      }
+
+      let currentIdx = 0;
+      snapTo(currentIdx);
+
+      function closestBlock(x,y){
+        const centers = blockCenters();
+        let min = Infinity, idx=0;
+        centers.forEach((c,i)=>{ const d = (c.x-x)**2 + (c.y-y)**2; if (d<min){min=d; idx=i;} });
+        return idx;
+      }
+
+      function startDrag(e){ dragging=true; arrow.style.display='none'; onMove(e); }
+      function endDrag(){ dragging=false; }
+      function onMove(e){ if(!dragging) return; const touch=e.touches?e.touches[0]:e; const idx=closestBlock(touch.clientX,touch.clientY); if(idx!==currentIdx){ currentIdx=idx; snapTo(idx);} }
+
+      thumb.addEventListener('touchstart', startDrag);
+      bar.addEventListener('touchstart', startDrag);
+      window.addEventListener('touchmove', onMove);
+      window.addEventListener('touchend', endDrag);
+      thumb.addEventListener('mousedown', e=>{ e.preventDefault(); startDrag(e); });
+      bar.addEventListener('mousedown', e=>{ startDrag(e); });
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', endDrag);
+
+      /* -------------- DIGITAL RAIN -------------- */
       (() => {
         const canvas = document.getElementById('matrixCanvas');
         const ctx    = canvas.getContext('2d');
-
-        const FONT_SIZE = 16;   // base font size in px
-        const SPEED     = 0.33; // 1/3 original speed (≈ every third frame)
-        let width, height, columns, drops;
+        const FONT   = 16; // px
+        const SPEED  = 0.33; // rows per frame
+        const FADE   = 0.05;
+        let cols, drops;
 
         function init() {
-          width  = canvas.width  = window.innerWidth;
-          height = canvas.height = window.innerHeight;
-          columns = Math.floor(width / FONT_SIZE);
-          drops   = new Array(columns).fill(1);
+          canvas.width  = window.innerWidth;
+          canvas.height = window.innerHeight;
+          cols  = Math.floor(canvas.width / FONT);
+          drops = Array.from({ length: cols }, () => Math.random()*canvas.height/FONT);
         }
-
         function draw() {
-          ctx.fillStyle = 'rgba(0,0,0,0.05)';
-          ctx.fillRect(0, 0, width, height);
-
-          ctx.fillStyle = '#24fff4';
-          ctx.font      = FONT_SIZE + 'px monospace';
-
-          for (let i = 0; i < columns; i++) {
-            const char = String.fromCharCode(0x30A0 + Math.random() * 96);
-            const x = i * FONT_SIZE;
-            const y = drops[i] * FONT_SIZE;
-            ctx.fillText(char, x, y);
-
-            drops[i] += SPEED; // slow fall
-            if (y > height && Math.random() > 0.975) drops[i] = 0;
+          ctx.fillStyle=`rgba(0,0,0,${FADE})`; ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--matrix') || '#24fff4';
+          ctx.font = FONT+'px monospace';
+          for(let i=0;i<cols;i++){
+            const char = String.fromCharCode(0x30A0+Math.random()*96);
+            const x=i*FONT; const y=drops[i]*FONT;
+            ctx.fillText(char,x,y);
+            drops[i]+=SPEED;
+            if(y>canvas.height && Math.random()>0.975) drops[i]=0;
           }
           requestAnimationFrame(draw);
         }
-
-        init();
-        draw();
-        window.addEventListener('resize', init);
+        init(); draw(); window.addEventListener('resize',init);
       })();
 
-      /* ---------------- JOYSTICKS ---------------- */
-      function initJoystick(joyId, stickId) {
-        const joy   = document.getElementById(joyId);
-        const stick = document.getElementById(stickId);
-        const LIMIT = 0.4; // fraction of radius
-        let active  = null;
-
-        const center = () => {
-          const r = joy.getBoundingClientRect();
-          return { x: r.left + r.width / 2, y: r.top + r.height / 2, max: (r.width / 2) * LIMIT };
-        };
-
-        joy.addEventListener('touchstart', e => {
-          for (const t of e.changedTouches) {
-            if (joy.contains(t.target) && active === null) active = t.identifier;
-          }
-        });
-
-        joy.addEventListener('touchmove', e => {
-          for (const t of e.touches) {
-            if (t.identifier === active) {
-              const c = center();
-              let dx = t.clientX - c.x;
-              let dy = t.clientY - c.y;
-              const dist = Math.min(Math.hypot(dx, dy), c.max);
-              const ang  = Math.atan2(dy, dx);
-              dx = dist * Math.cos(ang);
-              dy = dist * Math.sin(ang);
-              stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-              // TODO: send via Bluetooth
-            }
-          }
-        });
-
-        joy.addEventListener('touchend', e => {
-          for (const t of e.changedTouches) {
-            if (t.identifier === active) {
-              active = null;
-              stick.style.transform = 'translate(-50%, -50%)';
-            }
-          }
-        });
+      /* -------------- JOYSTICK -------------- */
+      function initJoystick(joyId,stickId){
+        const joy=document.getElementById(joyId);
+        const stick=document.getElementById(stickId);
+        const LIMIT=0.4; let active=null;
+        const center=()=>{const r=joy.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,max:(r.width/2)*LIMIT}};
+        const handleMove=(x,y)=>{const c=center();let dx=x-c.x;let dy=y-c.y;const dist=Math.min(Math.hypot(dx,dy),c.max);const ang=Math.atan2(dy,dx);dx=dist*Math.cos(ang);dy=dist*Math.sin(ang);stick.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;};
+        joy.addEventListener('touchstart',e=>{for(const t of e.changedTouches) if(active===null){active=t.identifier;handleMove(t.clientX,t.clientY);}});
+        window.addEventListener('touchmove',e=>{for(const t of e.touches) if(t.identifier===active) handleMove(t.clientX,t.clientY);});
+        window.addEventListener('touchend',e=>{for(const t of e.changedTouches) if(t.identifier===active){active=null;stick.style.transform='translate(-50%, -50%)';}});
+        joy.addEventListener('mousedown',e=>{active='mouse';handleMove(e.clientX,e.clientY);});
+        window.addEventListener('mousemove',e=>{if(active==='mouse') handleMove(e.clientX,e.clientY);});
+        window.addEventListener('mouseup',()=>{if(active==='mouse'){active=null;stick.style.transform='translate(-50%, -50%)';}});
       }
-
-      initJoystick('left-joystick',  'left-stick');
-      initJoystick('right-joystick', 'right-stick');
+      initJoystick('right-joystick','right-stick');
     </script>
   </body>
 </html>
