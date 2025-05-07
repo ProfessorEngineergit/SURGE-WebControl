@@ -93,7 +93,7 @@
         justify-content:center
       }
       .joystick-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;backdrop-filter:inherit;-webkit-backdrop-filter:inherit;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;} /* touch-action:none ist wichtig für Joystick */
+      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;}
       .stick{--size:70%;width:var(--size);height:var(--size);background:var(--glow);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 20px 8px var(--glow);transition:transform .05s linear}
       
       #speedbar{
@@ -202,7 +202,7 @@
             speedBar.style.height = '0px';
         }
         
-        function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
+        // --- SLIDER LOGIC ---
         let snapIndex=-1; 
         let drag=false; 
 
@@ -226,15 +226,13 @@
           const blockRotation = parseFloat(currentBlock.dataset.rotation) || 0;
           const thumbActualHeight = thumb.offsetHeight; 
           const spacing = 10; 
-          let thumbTargetX, thumbTargetY; let thumbAngle = blockRotation;
+          let thumbTargetX, thumbTargetY; 
 
           if (blockRotation === 0) { 
             thumbTargetX = (blockRect.right - speedBarRect.left) + spacing + (thumbActualHeight / 2); 
             thumbTargetY = (blockRect.top - speedBarRect.top) + blockRect.height / 2; 
-            thumbAngle = 0; 
           } 
-          
-          thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(${thumbAngle}deg)`;
+          thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(0deg)`;
           
           if (arrow.style.display === 'block') {
             let arrowX = thumbTargetX; 
@@ -249,19 +247,29 @@
           }
         }
 
-        function closest(x,y){if(blocks.length===0) return -1; const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
+        function closest(x,y){
+            if(blocks.length===0) return -1; 
+            const cs=blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});
+            let m=1e9,idx=0;
+            cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});
+            return idx;
+        }
         
         function startDrag(e) { 
             if(blocks.length===0) return; 
+            if (joystickActiveTouchId !== null && typeof joystickActiveTouchId === 'number' && e.touches) return;
+            if (joystickActiveTouchId === 'mouse' && e.type === 'mousedown') return;
+
             drag=true;
             arrow.style.display='none'; 
             moveDrag(e); 
             e.preventDefault();
         }
         function endDrag() {
-            if(blocks.length===0) return; 
-            drag=false; 
-            updateArrowVisibility(); 
+            if(drag) {
+                drag=false; 
+                updateArrowVisibility(); 
+            }
         }
         function moveDrag(e) {
             if(!drag || blocks.length===0)return;
@@ -273,26 +281,15 @@
         
         thumb.addEventListener('mousedown',startDrag);
         speedBar.addEventListener('mousedown',startDrag);
-        window.addEventListener('mousemove',moveDrag);
-        window.addEventListener('mouseup',endDrag);
         thumb.addEventListener('touchstart',startDrag,{passive:false});
         speedBar.addEventListener('touchstart',startDrag,{passive:false});
-        window.addEventListener('touchmove',moveDrag,{passive:false});
-        window.addEventListener('touchend',endDrag);
-        
-        if (blocks.length > 0) {
-            snap(0); 
-        } else { 
-            thumb.style.display = 'none'; 
-            arrow.style.display = 'none'; 
-        }
 
-        /* === JOYSTICK === */
+        /* === JOYSTICK UI LOGIC === */
         const joy = document.getElementById('right-joystick'); 
         const stick = document.getElementById('right-stick');  
-        let activeTouchId = null; 
+        let joystickActiveTouchId = null; // Behält die ID des aktiven Touch-Punkts für den Joystick
 
-        const ctr = () => {
+        const getJoystickCenterAndMax = () => {
             const joyRect = joy.getBoundingClientRect(); 
             const stickRect = stick.getBoundingClientRect(); 
             const joyRadius = joyRect.width / 2;
@@ -305,8 +302,8 @@
             };
         };
 
-        const mv = (clientX, clientY) => { 
-            const c = ctr();
+        const moveJoystickUI = (clientX, clientY) => { 
+            const c = getJoystickCenterAndMax();
             let dx = clientX - c.x;
             let dy = clientY - c.y;
             const dist = Math.min(Math.hypot(dx, dy), c.max); 
@@ -318,59 +315,205 @@
         
         joy.addEventListener('touchstart', e => {
             e.preventDefault(); 
-            for (const touch of e.changedTouches) {
-                if (activeTouchId === null) { 
-                    activeTouchId = touch.identifier; 
-                    mv(touch.clientX, touch.clientY); 
-                    break; 
-                }
-            }
-        }, { passive: false });
+            if (drag && e.touches && Array.from(e.touches).some(t => t.target === speedBar || t.target === thumb)) return;
 
+            if (joystickActiveTouchId === null) { 
+                 const touch = e.changedTouches[0];
+                 joystickActiveTouchId = touch.identifier;
+                 moveJoystickUI(touch.clientX, touch.clientY);
+            }
+        },{passive:false});
+      
+        joy.addEventListener('mousedown', e => {
+            e.preventDefault();
+            if (drag) return;
+            joystickActiveTouchId = 'mouse';
+            moveJoystickUI(e.clientX, e.clientY); 
+        });
+
+        // --- GLOBALE WINDOW EVENT LISTENERS (vereinfacht) ---
         window.addEventListener('touchmove', e => {
-            if (activeTouchId !== null) { 
-                for (const touch of e.touches) { 
-                    if (touch.identifier === activeTouchId) { 
-                        mv(touch.clientX, touch.clientY);
+            if (drag) { 
+                moveDrag(e); 
+            } else if (joystickActiveTouchId !== null && typeof joystickActiveTouchId === 'number') { 
+                for (const touch of e.touches) {
+                    if (touch.identifier === joystickActiveTouchId) {
+                        moveJoystickUI(touch.clientX, touch.clientY);
                         e.preventDefault(); 
-                        break; 
+                        break;
                     }
                 }
             }
         }, { passive: false });
 
-        function handleTouchEndOrCancel(e) {
-            for (const touch of e.changedTouches) {
-                if (touch.identifier === activeTouchId) { 
-                    activeTouchId = null; 
-                    stick.style.transform = 'translate(-50%,-50%)'; 
-                    break;
-                }
-            }
-        }
-
-        window.addEventListener('touchend', handleTouchEndOrCancel);
-        window.addEventListener('touchcancel', handleTouchEndOrCancel); 
-        
-        joy.addEventListener('mousedown', e => {
-            activeTouchId = 'mouse'; 
-            mv(e.clientX, e.clientY); 
-            e.preventDefault();
-        });
-
         window.addEventListener('mousemove', e => {
-            if (activeTouchId === 'mouse') { 
-                mv(e.clientX, e.clientY); 
+            if (drag) { 
+                moveDrag(e);
+            } else if (joystickActiveTouchId === 'mouse') { 
+                moveJoystickUI(e.clientX, e.clientY);
                 e.preventDefault();
             }
         });
 
+        function handleGlobalTouchEndOrCancel(e) {
+            let wasSliderDrag = drag; // Merken, ob der Slider aktiv war, BEVOR wir 'drag' ändern
+
+            if (joystickActiveTouchId !== null && typeof joystickActiveTouchId === 'number') { 
+                for (const touch of e.changedTouches) {
+                    if (touch.identifier === joystickActiveTouchId) {
+                        joystickActiveTouchId = null;
+                        stick.style.transform = 'translate(-50%,-50%)';
+                        // Wichtig: Wenn der Joystick-Touch endet, soll der Slider nicht beeinflusst werden
+                        // und auch nicht dessen endDrag() auslösen, falls der Touch zufällig im Slider-Bereich endet.
+                        wasSliderDrag = false; 
+                        break;
+                    }
+                }
+            }
+             // Slider-Ende nur behandeln, wenn es *nicht* der Joystick-Touch war, der endete
+             // UND der Slider tatsächlich aktiv war. Die `drag`-Variable wird hier verwendet.
+            if (wasSliderDrag) { // Wenn der Slider aktiv war (und nicht gerade der Joystick-Touch endete)
+                 let sliderTouchEnded = false;
+                 for (const touch of e.changedTouches) {
+                     // Hier ist es knifflig, den spezifischen Slider-Touch zu identifizieren ohne ID.
+                     // Wir nehmen an, wenn drag=true und ein Touch endet, war es der Slider-Touch.
+                     // Diese Annahme ist nicht perfekt für Multitouch, aber für die zurückgesetzte Logik passend.
+                     sliderTouchEnded = true; 
+                     break;
+                 }
+                 if(sliderTouchEnded) endDrag();
+            }
+        }
+        window.addEventListener('touchend', handleGlobalTouchEndOrCancel);
+        window.addEventListener('touchcancel', handleGlobalTouchEndOrCancel);
+        
         window.addEventListener('mouseup', () => {
-            if (activeTouchId === 'mouse') {
-                activeTouchId = null;
+            if (drag) { 
+                endDrag();
+            }
+            if (joystickActiveTouchId === 'mouse') { 
+                joystickActiveTouchId = null;
                 stick.style.transform = 'translate(-50%,-50%)';
             }
         });
+
+        // Initialisierung
+        if (blocks.length > 0) {
+            snap(0); 
+        } else { 
+            thumb.style.display = 'none'; 
+            arrow.style.display = 'none'; 
+        }
+
+        // --- GAMEPAD INTEGRATION ---
+        let connectedGamepad = null;
+        const GAMEPAD_INDEX = 0; // Index des Xbox-Controllers
+        const AXIS_DEADZONE = 0.15; // Totzone für Stick-Achsen
+
+        function handleGamepadConnected(event) {
+            console.log("Gamepad verbunden:", event.gamepad.id);
+            if (event.gamepad.index === GAMEPAD_INDEX) {
+                connectedGamepad = event.gamepad;
+            }
+        }
+
+        function handleGamepadDisconnected(event) {
+            console.log("Gamepad getrennt:", event.gamepad.id);
+            if (connectedGamepad && event.gamepad.index === connectedGamepad.index) {
+                connectedGamepad = null;
+            }
+        }
+
+        window.addEventListener("gamepadconnected", handleGamepadConnected);
+        window.addEventListener("gamepaddisconnected", handleGamepadDisconnected);
+
+        function applyDeadzone(value) {
+            return Math.abs(value) < AXIS_DEADZONE ? 0 : value;
+        }
+
+        function gamepadLoop() {
+            if (!connectedGamepad) {
+                // Versuche, Gamepads abzurufen, falls die Events nicht gefeuert wurden
+                const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+                for (let i = 0; i < gamepads.length; i++) {
+                    if (gamepads[i] && gamepads[i].index === GAMEPAD_INDEX) {
+                        connectedGamepad = gamepads[i];
+                        console.log("Gamepad gefunden (Polling):", connectedGamepad.id);
+                        break;
+                    }
+                }
+            }
+
+            if (connectedGamepad) {
+                // Gamepad-Objekt erneut abrufen, da sich der Zustand ändern kann
+                const gp = navigator.getGamepads()[connectedGamepad.index];
+                if (!gp) {
+                    connectedGamepad = null; // Gamepad scheint nicht mehr gültig zu sein
+                    requestAnimationFrame(gamepadLoop);
+                    return;
+                }
+
+                // Linker Stick für Fahren (typische Xbox-Belegung)
+                // Achse 1: Y-Achse (oben/unten), -1 ist oft oben. Wir invertieren es, damit +1 vorwärts ist.
+                // Achse 0: X-Achse (links/rechts), -1 ist links.
+                let forward = applyDeadzone(-gp.axes[1]); // Invertieren und Totzone
+                let turn = applyDeadzone(gp.axes[0]);    // Totzone
+
+                // Geschwindigkeitslevel vom UI-Slider
+                // snapIndex geht von 0 (unten) bis numVerticalBlocks - 1 (oben)
+                // Wir wollen einen Faktor von ~0.1 bis 1.0
+                let speedLevel = 0.1; // Mindestgeschwindigkeit
+                if (blocks.length > 1) {
+                    speedLevel = (snapIndex / (blocks.length - 1)) * 0.9 + 0.1; // Skaliert 0..1 auf 0.1..1.0
+                } else if (blocks.length === 1) {
+                    speedLevel = 0.5; // Fester Wert, wenn nur ein Block da ist
+                }
+                speedLevel = Math.max(0.1, Math.min(1.0, speedLevel)); // Sicherstellen, dass es im Bereich bleibt
+
+
+                // Differential Drive Mixing (einfache Version)
+                // forward: -1 (rückwärts) bis +1 (vorwärts)
+                // turn:    -1 (links drehen) bis +1 (rechts drehen)
+                
+                let leftSpeed = forward - turn;
+                let rightSpeed = forward + turn;
+
+                // Normalisieren, falls Werte außerhalb von -1 bis +1 liegen
+                const maxMagnitude = Math.max(Math.abs(leftSpeed), Math.abs(rightSpeed));
+                if (maxMagnitude > 1) {
+                    leftSpeed /= maxMagnitude;
+                    rightSpeed /= maxMagnitude;
+                }
+
+                // Endgültige Geschwindigkeit mit UI-Slider-Level anwenden
+                leftSpeed *= speedLevel;
+                rightSpeed *= speedLevel;
+                
+                // Simulierte Ausgabe der Radgeschwindigkeiten
+                // In einer echten Anwendung würden diese Werte an den Roboter gesendet.
+                console.clear(); // Konsole für bessere Lesbarkeit bei jedem Frame leeren
+                console.log(`UI Speed Level: ${speedLevel.toFixed(2)} (Slider Index: ${snapIndex})`);
+                console.log(`Gamepad Forward: ${forward.toFixed(2)}, Turn: ${turn.toFixed(2)}`);
+                console.log(`Calculated Left Wheel: ${leftSpeed.toFixed(2)}`);
+                console.log(`Calculated Right Wheel: ${rightSpeed.toFixed(2)}`);
+
+                // Hier würde die Logik stehen, um leftSpeed und rightSpeed
+                // an den NVIDIA JetBot zu senden (z.B. über WebSockets, WebRTC, HTTP-Requests).
+            }
+
+            requestAnimationFrame(gamepadLoop);
+        }
+
+        // Initialisierung für Slider und UI-Joystick (wie vorher)
+        if (blocks.length > 0) {
+            snap(0); 
+        } else { 
+            thumb.style.display = 'none'; 
+            arrow.style.display = 'none'; 
+        }
+        // Gamepad Loop starten
+        gamepadLoop();
+
 
         /* === DIGITAL RAIN === */
         const canvas=document.getElementById('matrixCanvas');const ctx=canvas.getContext('2d');const FONT=16,SPEED=0.33,FADE=0.05;let cols,drops;function rainInit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;cols=Math.floor(canvas.width/FONT);drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);}rainInit();(function draw(){ctx.fillStyle=`rgba(0,0,0,${FADE})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');ctx.font=FONT+'px monospace';for(let i=0;i<cols;i++){const ch=String.fromCharCode(0x30A0+Math.random()*96);const x=i*FONT,y=drops[i]*FONT;ctx.fillText(ch,x,y);drops[i]+=SPEED;if(y>canvas.height&&Math.random()>0.975)drops[i]=0;}requestAnimationFrame(draw);})();window.addEventListener('resize',rainInit);
