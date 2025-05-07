@@ -25,76 +25,49 @@
         --glow  : #ffffff;
         --speed-gray: rgba(255,255,255,0.28);
         --speed-red : #ff4040;
-        --bar-gap: 10px; /* Beibehalten für JS-Logik, obwohl Blöcke jetzt aneinander liegen */
       }
 
-      /* GLOBAL -------------------------------------------------- */
       html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Nasalization",sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
       .glow{color:#fff;text-shadow:0 0 8px var(--glow),0 0 20px var(--glow)}
-
-      /* CANVAS (digital rain) ---------------------------------- */
       #matrixCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-
-      /* BLUR‑GLASS --------------------------------------------- */
       .glass{backdrop-filter:blur(22px)saturate(180%);-webkit-backdrop-filter:blur(22px)saturate(180%);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:28px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-
-      /* TOP BAR */
       #top-window{position:fixed;top:8vh;left:50%;transform:translateX(-50%);width:clamp(240px,70%,680px);padding:18px 32px;text-align:center;z-index:10}
       #top-window h1{margin:0;font-size:clamp(1.4rem,4vw,2.8rem)}
-
-      /* CONTROL BAR */
-      #controls-window{
-        position:fixed;
-        bottom:6vh;left:50%;
-        transform:translateX(-50%);
-        width:clamp(320px,90%,600px); /* Verkleinert */
-        padding:20px 25px; /* Verkleinert */
+      #controls-window{position:fixed;bottom:6vh;left:50%;transform:translateX(-50%);width:clamp(340px, 88%, 580px);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:clamp(15px, 3vw, 30px);z-index:10}
+      
+      /* JOYSTICK GRÖSSER GEMACHT */
+      .joystick-ring{
+        position:relative;
+        flex:0 0 clamp(220px,40vw,320px); /* Werte erhöht für größeren Joystick */
+        aspect-ratio:1;
+        border-radius:50%;
         display:flex;
-        justify-content:space-between;
         align-items:center;
-        gap:clamp(25px,5vw,50px); /* Verkleinert */
-        z-index:10
+        justify-content:center
       }
-
-      /* JOYSTICK (larger, free roam) */
-      .joystick-ring{position:relative;flex:0 0 clamp(200px,35vw,280px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center} /* Flex-Basis angepasst */
       .joystick-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;backdrop-filter:inherit;-webkit-backdrop-filter:inherit;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;} /* overflow:hidden entfernt */
-      .stick{--size:70%;width:var(--size);height:var(--size);background:var(--glow);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 20px 8px var(--glow);transition:transform .05s linear} /* Größe erhöht */
-
-      /* SPEED BAR L‑shape */
-      #speedbar{position:relative;display:inline-block}
-      .speed-block{width:36px;height:24px;border-radius:6px;background:var(--speed-gray);transition:background .15s}
+      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;}
+      .stick{--size:70%;width:var(--size);height:var(--size);background:var(--glow);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 20px 8px var(--glow);transition:transform .05s linear}
+      
+      #speedbar{
+        position:relative;
+        display:inline-block; 
+      }
+      .speed-block{
+        border-radius:6px;background:var(--speed-gray);transition:background .15s;
+        transform-origin: bottom left; 
+      }
       .speed-block.active{background:var(--speed-red)}
-      /* individual positions will be absolute via JS */
-      #speed-thumb{
-        position:absolute;
-        width:6px;height:28px;
-        background:#bbb;
-        border-radius:3px;
-        transition:transform .15s;
-        transform-origin: center center; /* Wichtig für Rotation */
-      }
-      #drag-arrow{
-        position:absolute; /* Wird via JS transformiert */
-        font-size:14px;
-        color:#aaa;
-        animation:bounce 1.2s infinite ease-in-out;
-        transform-origin:center bottom;
-        /* Initial transform is set in JS */
-      }
+      #speed-thumb{position:absolute;width:6px;height:28px;background:#bbb;border-radius:3px;transition:transform .15s;transform-origin: center center;}
+      #drag-arrow{position:absolute;font-size:14px;color:#aaa;animation:bounce 1.2s infinite ease-in-out;transform-origin:center bottom;}
       @keyframes bounce{0%,100%{transform:translate(-50%, -50%) translateY(0) scaleY(1)}50%{transform:translate(-50%, -50%) translateY(-8px) scaleY(1.3)}}
     </style>
   </head>
   <body>
     <canvas id="matrixCanvas"></canvas>
-
     <div id="top-window" class="glass"><h1 class="glow">SURGE‑WebControl</h1></div>
-
     <div id="controls-window" class="glass">
-      <!-- SPEED BAR -->
       <div id="speedbar"></div>
-      <!-- RIGHT JOYSTICK -->
       <div class="joystick-ring glass">
         <div class="joystick" id="right-joystick"><div class="stick" id="right-stick"></div></div>
       </div>
@@ -102,150 +75,231 @@
 
     <script>
       document.addEventListener('DOMContentLoaded',()=>{
-        /* === SPEED BAR SETUP === */
         const speedBar = document.getElementById('speedbar');
         const thumb    = document.createElement('div'); thumb.id='speed-thumb'; speedBar.appendChild(thumb);
         const arrow    = document.createElement('div'); arrow.id='drag-arrow'; arrow.textContent='▲'; speedBar.appendChild(arrow);
 
-        const blocks=[];
-        const size = 36; // Hauptdimension der Blöcke (Breite für vertikale, Höhe für horizontale)
-        const secondarySize = 24; // Nebendimension
-        const gap=10; // Beibehalten für JS-Abstandsberechnungen, Blöcke selbst liegen aneinander
-
-        // create Funktion speichert Rotation
-        const create=(x,y,rot=0)=>{
-            const b=document.createElement('div');
-            b.className='speed-block';
-            b.style.position='absolute';
-            b.style.left=x+'px';
-            b.style.bottom=y+'px';
-            b.style.transform=`rotate(${rot}deg)`;
-            // Korrektur für transform-origin bei rotierten Elementen für Layout
-            if (rot === 45) { // Diagonaler Block
-                 b.style.transformOrigin = 'bottom left';
-            } else if (rot === 90) { // Horizontaler Block
-                 b.style.transformOrigin = 'bottom left';
-            }
-            b.dataset.rotation = rot; // Speichere Rotation für Thumb-Logik
-            speedBar.appendChild(b);
-            blocks.push(b);
-        };
+        const blocks=[]; 
         
-        // Vertikale Blöcke (0-3)
-        for(let i=0;i<4;i++) create(0, i * secondarySize, 0); // Kein Gap zwischen Blöcken
-        // Diagonal
-        // Positionierung des diagonalen Blocks, sodass er an den letzten vertikalen anschließt
-        // Letzter vertikaler Block endet bei y = 3 * secondarySize + secondarySize = 4 * secondarySize
-        // Diagonaler Block startet links bei x = 0, y = 4 * secondarySize
-        create(0, 4 * secondarySize, 45);
-        // Horizontale Blöcke (rechts davon)
-        // Der diagonale Block (36x24 rotiert um 45°) hat eine projizierte Breite und Höhe.
-        // Breite_proj = 36*cos(45) + 24*sin(45) = (36+24)/sqrt(2) ~ 42.4
-        // Höhe_proj = 36*sin(45) + 24*cos(45) = (36+24)/sqrt(2) ~ 42.4
-        // Startpunkt für horizontale Blöcke:
-        const diagBlockEffectiveWidth = (size + secondarySize) / Math.sqrt(2); // Ungefähre Breite der Diagonale
-        const diagBlockEffectiveHeight = (size + secondarySize) / Math.sqrt(2); // Ungefähre Höhe der Diagonale
+        const baseNumVerticalBlocks = 12; 
+        const secondarySize = 24; 
+        
+        const numVerticalBlocks = Math.floor(baseNumVerticalBlocks / 2); 
+        const size = secondarySize * 2.5; 
+        const numHorizontalBlocks = 0; 
 
-        for(let i=0;i<4;i++) create(diagBlockEffectiveWidth + i * secondarySize, (4 * secondarySize) + diagBlockEffectiveHeight - secondarySize, 90);
+        const allBlockData = [];
 
+        const verticalBlocksX_local = 0; 
+        let currentVerticalY_cssBottom = 0; 
 
-        // adjust bar size
-        // Max x: diagBlockEffectiveWidth + 4 * secondarySize
-        // Max y: 4 * secondarySize + diagBlockEffectiveHeight
-        speedBar.style.width = (diagBlockEffectiveWidth + 4 * secondarySize) + 'px';
-        speedBar.style.height = (4 * secondarySize + diagBlockEffectiveHeight) + 'px';
+        for (let i = 0; i < numVerticalBlocks; i++) {
+            allBlockData.push({
+                x: verticalBlocksX_local,
+                y: currentVerticalY_cssBottom,
+                rot: 0,
+                w: size,          
+                h: secondarySize  
+            });
+            currentVerticalY_cssBottom += secondarySize; 
+        }
+        
+        let minOverallX = Infinity, minOverallY = Infinity;
+        let maxOverallX = -Infinity, maxOverallY = -Infinity;
 
+        if (allBlockData.length > 0) { 
+            allBlockData.forEach(data => {
+                const { x, y, rot, w, h } = data; 
+                const rad = rot * Math.PI / 180;
+                const cosR = Math.cos(rad);
+                const sinR = Math.sin(rad);
+                const points = [
+                    { xp: x, yp: y }, 
+                    { xp: x + w * cosR, yp: y + w * sinR }, 
+                    { xp: x - h * sinR, yp: y + h * cosR }, 
+                    { xp: x + w * cosR - h * sinR, yp: y + w * sinR + h * cosR }
+                ];
+                points.forEach(p => {
+                    minOverallX = Math.min(minOverallX, p.xp);
+                    minOverallY = Math.min(minOverallY, p.yp);
+                    maxOverallX = Math.max(maxOverallX, p.xp);
+                    maxOverallY = Math.max(maxOverallY, p.yp);
+                });
+            });
+        } else { 
+            minOverallX = 0; minOverallY = 0; maxOverallX = 0; maxOverallY = 0;
+        }
+        
+        const finalOffsetX = -minOverallX;
+        const finalOffsetY = -minOverallY;
 
-        /* SNAP / DRAG LOGIC */
+        allBlockData.forEach(data => {
+            const b = document.createElement('div');
+            b.className = 'speed-block';
+            b.style.position = 'absolute';
+            b.style.left = (data.x + finalOffsetX) + 'px';
+            b.style.bottom = (data.y + finalOffsetY) + 'px';
+            b.style.width = data.w + 'px';
+            b.style.height = data.h + 'px';
+            b.style.transform = `rotate(${data.rot}deg)`;
+            b.dataset.rotation = data.rot; 
+            speedBar.appendChild(b);
+            blocks.push(b); 
+        });
+        
+        if (allBlockData.length > 0) {
+            speedBar.style.width = (maxOverallX - minOverallX) + 'px';
+            speedBar.style.height = (maxOverallY - minOverallY) + 'px';
+        } else {
+            speedBar.style.width = '0px';
+            speedBar.style.height = '0px';
+        }
+        
+        // Funktion für haptisches Feedback
+        function triggerHapticFeedback(pattern = 50) { // Standardmäßig eine kurze Vibration
+            if (navigator.vibrate) {
+                try {
+                    navigator.vibrate(pattern);
+                } catch (e) {
+                    console.warn("Vibration failed:", e);
+                }
+            }
+        }
+
         function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
-        let index=0,drag=false;
-
+        let snapIndex=0,drag=false; 
         function snap(i){
-          index=i;
+          if (i < 0 || i >= blocks.length) return; 
+          
+          const oldSnapIndex = snapIndex;
+          snapIndex=i;
+          
           blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=i));
           
+          // Haptisches Feedback nur wenn sich der Snap-Index tatsächlich ändert
+          if (oldSnapIndex !== snapIndex) {
+              triggerHapticFeedback(30); // Kürzere Vibration für "Snap"
+          }
+
           const currentBlock = blocks[i];
           const blockRect = currentBlock.getBoundingClientRect();
           const speedBarRect = speedBar.getBoundingClientRect();
           const blockRotation = parseFloat(currentBlock.dataset.rotation) || 0;
+          const thumbActualHeight = thumb.offsetHeight; 
+          const spacing = 10; 
+          let thumbTargetX, thumbTargetY; let thumbAngle = blockRotation;
 
-          const thumbWidth = thumb.offsetWidth;
-          const thumbHeight = thumb.offsetHeight;
-          const spacing = 10; // 10 Punkte Abstand
-
-          let thumbTargetX, thumbTargetY; // Ziel-Koordinaten für den Mittelpunkt des Thumbs
-          let thumbAngle = blockRotation;
-
-          if (blockRotation === 0) { // Vertikaler Block
-            thumbTargetX = (blockRect.right - speedBarRect.left) + spacing + thumbWidth / 2;
-            thumbTargetY = (blockRect.top - speedBarRect.top) + blockRect.height / 2;
-          } else if (blockRotation === 90) { // Horizontaler Block
-            thumbTargetX = (blockRect.left - speedBarRect.left) + blockRect.width / 2;
-            thumbTargetY = (blockRect.bottom - speedBarRect.top) + spacing + thumbHeight / 2; // ThumbHeight, da es um 90° gedreht wird
-          } else { // 45° Diagonaler Block
-            const blockCenterX = (blockRect.left - speedBarRect.left) + blockRect.width / 2;
-            const blockCenterY = (blockRect.top - speedBarRect.top) + blockRect.height / 2;
-            
-            // Vektor, der vom Blockzentrum nach außen zeigt (senkrecht zur Blockausrichtung)
-            const outwardAngleRad = (blockRotation + 90) * Math.PI / 180; 
-            // Ungefährer Abstand vom Blockzentrum zum äußeren Rand + spacing + halbe Thumb-Breite
-            // Nehmen wir die halbe "Hauptdimension" des Blocks als Referenz für den Radius
-            const effectiveBlockRadius = Math.max(blockRect.width, blockRect.height) / Math.sqrt(8); // sqrt(8) weil es rotiert ist und wir ca. eine Kante wollen
-            const offsetMagnitude = effectiveBlockRadius + spacing + Math.max(thumbWidth, thumbHeight) / 2;
-
-            thumbTargetX = blockCenterX + offsetMagnitude * Math.cos(outwardAngleRad);
-            thumbTargetY = blockCenterY + offsetMagnitude * Math.sin(outwardAngleRad);
-          }
+          if (blockRotation === 0) { 
+            thumbTargetX = (blockRect.right - speedBarRect.left) + spacing + (thumbActualHeight / 2); 
+            thumbTargetY = (blockRect.top - speedBarRect.top) + blockRect.height / 2; 
+            thumbAngle = 0; 
+          } 
           
           thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(${thumbAngle}deg)`;
+          
+          let arrowX = thumbTargetX; 
+          let arrowY = thumbTargetY; 
+          const arrowSpacing = 15; 
 
-          // Arrow positionieren - etwas "über" dem Thumb (in Richtung der L-Form-Progression)
-          // Relativ zum Thumb-Mittelpunkt, aber nicht rotiert
-          let arrowX = thumbTargetX;
-          let arrowY = thumbTargetY;
-          const arrowOffset = 25; // Wie weit der Pfeil vom Thumb-Zentrum entfernt ist
-
-          if (blockRotation === 0) arrowY -= arrowOffset; // Über dem vertikalen Thumb
-          else if (blockRotation === 90) arrowX += arrowOffset; // Rechts vom horizontalen Thumb (progression)
-          else { // Diagonal
-            const arrowAngleRad = (blockRotation - 45) * Math.PI / 180; // Entlang der "aufsteigenden" Diagonale
-            arrowX += arrowOffset * Math.cos(arrowAngleRad);
-            arrowY -= arrowOffset * Math.sin(arrowAngleRad); // Y geht nach oben bei kleinerem Wert
+          if (blockRotation === 0) { 
+             arrowX = thumbTargetX; 
+             arrowY = thumbTargetY - (thumb.offsetHeight / 2) - arrowSpacing; 
           }
-          // Der Pfeil selbst soll nicht rotieren, aber seine Bounce-Animation hat transform-origin: center bottom
-          // Die translate(-50%, -50%) ist für die Bounce-Animation wichtig, damit sie vom Zentrum aus "hüpft"
-          arrow.style.left = `${arrowX}px`;
+          arrow.style.left = `${arrowX}px`; 
           arrow.style.top = `${arrowY}px`;
-          // Die Bounce Animation wird `translate(-50%, -50%)` anwenden, also müssen wir das nicht hier tun
         }
 
-        function closest(x,y){const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
-        function start(e){drag=true;arrow.style.display='none';move(e); e.preventDefault();}   
-        function end(){drag=false; arrow.style.display='block';}  
-        function move(e){if(!drag)return;const t=e.touches?e.touches[0]:e;const i=closest(t.clientX,t.clientY);if(i!==index)snap(i); e.preventDefault();}  
+        function closest(x,y){if(blocks.length===0) return -1; const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
         
-        thumb.addEventListener('mousedown',start);speedBar.addEventListener('mousedown',start);window.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
-        thumb.addEventListener('touchstart',start,{passive:false});speedBar.addEventListener('touchstart',start,{passive:false});window.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',end);
-        snap(0); // Initial snap
+        function startDrag(e) { // Umbenannt für Klarheit, da es für Speedbar und Thumb gilt
+            if(blocks.length===0) return; 
+            triggerHapticFeedback(50); // Haptik beim Start des Drags auf der Speedbar
+            drag=true;
+            arrow.style.display='none';
+            moveDrag(e); 
+            e.preventDefault();
+        }
+        function endDrag() {
+            if(blocks.length===0) return; 
+            drag=false; 
+            arrow.style.display='block';
+        }
+        function moveDrag(e) {
+            if(!drag || blocks.length===0)return;
+            const t=e.touches?e.touches[0]:e;
+            const i=closest(t.clientX,t.clientY);
+            if(i!==snapIndex && i !== -1)snap(i); 
+            e.preventDefault();
+        }  
+        
+        thumb.addEventListener('mousedown',startDrag);
+        speedBar.addEventListener('mousedown',startDrag);
+        window.addEventListener('mousemove',moveDrag);
+        window.addEventListener('mouseup',endDrag);
+        thumb.addEventListener('touchstart',startDrag,{passive:false});
+        speedBar.addEventListener('touchstart',startDrag,{passive:false});
+        window.addEventListener('touchmove',moveDrag,{passive:false});
+        window.addEventListener('touchend',endDrag);
+        
+        if (blocks.length > 0) snap(0); else { thumb.style.display = 'none'; arrow.style.display = 'none'; }
 
         /* === JOYSTICK === */
-        const joy=document.getElementById('right-joystick');const stick=document.getElementById('right-stick');
-        const LIMIT=0.68; // Erhöht für mehr Bewegungsfreiheit
-        let act=null;
-        const ctr=()=>{const r=joy.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,max:(r.width/2)*LIMIT}};
-        const mv=(x,y)=>{const c=ctr();let dx=x-c.x,dy=y-c.y;const dist=Math.min(Math.hypot(dx,dy),c.max);const a=Math.atan2(dy,dx);dx=dist*Math.cos(a);dy=dist*Math.sin(a);stick.style.transform=`translate(calc(-50%+${dx}px),calc(-50%+${dy}px))`;};
-        joy.addEventListener('touchstart',e=>{e.preventDefault(); for(const t of e.changedTouches)if(act===null){act=t.identifier;mv(t.clientX,t.clientY);}},{passive:false});
+        const joy = document.getElementById('right-joystick'); 
+        const stick = document.getElementById('right-stick');  
+        const JOYSTICK_BOUNDARY_FACTOR = 1; 
+        let act = null;
+
+        const ctr = () => {
+            const joyRect = joy.getBoundingClientRect(); 
+            const ringElement = document.querySelector('.joystick-ring');
+            
+            if (!ringElement) {
+                console.error("Joystick ring element not found!");
+                return { 
+                    x: joyRect.left + joyRect.width / 2, 
+                    y: joyRect.top + joyRect.height / 2, 
+                    max: (joyRect.width / 2) * 0.68 
+                };
+            }
+            const ringRect = ringElement.getBoundingClientRect(); 
+
+            return {
+                x: joyRect.left + joyRect.width / 2,  
+                y: joyRect.top + joyRect.height / 2,   
+                max: (ringRect.width / 2) * JOYSTICK_BOUNDARY_FACTOR 
+            };
+        };
+
+        const mv = (x, y) => { 
+            const c = ctr();
+            let dx = x - c.x;
+            let dy = y - c.y;
+            const dist = Math.min(Math.hypot(dx, dy), c.max); 
+            const a = Math.atan2(dy, dx);
+            dx = dist * Math.cos(a);
+            dy = dist * Math.sin(a);
+            stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        };
+        
+        joy.addEventListener('touchstart',e=>{
+            e.preventDefault(); 
+            triggerHapticFeedback(50); // Haptik beim Berühren des Joysticks
+            for(const t of e.changedTouches)if(act===null){act=t.identifier;mv(t.clientX,t.clientY);}
+        },{passive:false});
         window.addEventListener('touchmove',e=>{if(act !== null && e.touches){for(const t of e.touches)if(t.identifier===act){mv(t.clientX,t.clientY); e.preventDefault();}}}, {passive:false});
         window.addEventListener('touchend',e=>{for(const t of e.changedTouches)if(t.identifier===act){act=null;stick.style.transform='translate(-50%,-50%)';}});
-        joy.addEventListener('mousedown',e=>{act='mouse';mv(e.clientX,e.clientY); e.preventDefault();});
+        
+        joy.addEventListener('mousedown',e=>{
+            act='mouse';
+            triggerHapticFeedback(50); // Haptik beim Klicken des Joysticks
+            mv(e.clientX,e.clientY); 
+            e.preventDefault();
+        });
         window.addEventListener('mousemove',e=>{if(act==='mouse') {mv(e.clientX,e.clientY); e.preventDefault();}});
         window.addEventListener('mouseup',()=>{if(act==='mouse'){act=null;stick.style.transform='translate(-50%,-50%)';}});
 
         /* === DIGITAL RAIN === */
-        const canvas=document.getElementById('matrixCanvas');const ctx=canvas.getContext('2d');const FONT=16,SPEED=0.33,FADE=0.05;let cols,drops;
-        function rainInit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;cols=Math.floor(canvas.width/FONT);drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);}rainInit();
-        (function draw(){ctx.fillStyle=`rgba(0,0,0,${FADE})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');ctx.font=FONT+'px monospace';for(let i=0;i<cols;i++){const ch=String.fromCharCode(0x30A0+Math.random()*96);const x=i*FONT,y=drops[i]*FONT;ctx.fillText(ch,x,y);drops[i]+=SPEED;if(y>canvas.height&&Math.random()>0.975)drops[i]=0;}requestAnimationFrame(draw);})();
-        window.addEventListener('resize',rainInit);
+        const canvas=document.getElementById('matrixCanvas');const ctx=canvas.getContext('2d');const FONT=16,SPEED=0.33,FADE=0.05;let cols,drops;function rainInit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;cols=Math.floor(canvas.width/FONT);drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);}rainInit();(function draw(){ctx.fillStyle=`rgba(0,0,0,${FADE})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');ctx.font=FONT+'px monospace';for(let i=0;i<cols;i++){const ch=String.fromCharCode(0x30A0+Math.random()*96);const x=i*FONT,y=drops[i]*FONT;ctx.fillText(ch,x,y);drops[i]+=SPEED;if(y>canvas.height&&Math.random()>0.975)drops[i]=0;}requestAnimationFrame(draw);})();window.addEventListener('resize',rainInit);
       });
     </script>
   </body>
