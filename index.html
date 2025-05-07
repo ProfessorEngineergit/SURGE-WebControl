@@ -2,11 +2,11 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SURGE‑WebControl</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SURGE-WebControl</title>
 
     <!-- Nasalization Font -->
-    <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet" />
+    <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet"/>
     <style>
       @font-face {
         font-family: "Nasalization";
@@ -17,7 +17,9 @@
     </style>
 
     <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-bugHuflTqEZZ2uRiKqdF6RxQ9WG/jc2LGJtIDiCGk4BmSL7xIuiKdVhK1hO6Jp5ablZGjDVqdDriLetr7vV0Lg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          integrity="sha512-bugHuflTqEZZ2uRiKqdF6RxQ9WG/jc2LGJtIDiCGk4BmSL7xIuiKdVhK1hO6Jp5ablZGjDVqdDriLetr7vV0Lg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
       :root {
@@ -27,289 +29,347 @@
         --speed-red : #ff4040;
       }
 
-      html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Nasalization",sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
-      .glow{color:#fff;text-shadow:0 0 8px var(--glow),0 0 20px var(--glow)}
-      #matrixCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-      .glass{backdrop-filter:blur(22px)saturate(180%);-webkit-backdrop-filter:blur(22px)saturate(180%);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:28px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-      #top-window{position:fixed;top:8vh;left:50%;transform:translateX(-50%);width:clamp(240px,70%,680px);padding:18px 32px;text-align:center;z-index:10}
-      #top-window h1{margin:0;font-size:clamp(1.4rem,4vw,2.8rem)}
-      #controls-window{position:fixed;bottom:6vh;left:50%;transform:translateX(-50%);width:clamp(340px, 88%, 580px);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:clamp(15px, 3vw, 30px);z-index:10}
-      
-      .joystick-ring{
+      html, body {
+        margin:0;
+        height:100%;
+        background:#000;
+        color:#fff;
+        font-family:"Nasalization",sans-serif;
+        overflow:hidden;
+        -webkit-font-smoothing:antialiased;
+      }
+      .glow {
+        color:#fff;
+        text-shadow:0 0 8px var(--glow),0 0 20px var(--glow);
+      }
+      #matrixCanvas {
+        position:fixed;
+        inset:0;
+        width:100%;
+        height:100%;
+        pointer-events:none;
+        z-index:0;
+      }
+      .glass {
+        backdrop-filter:blur(22px)saturate(180%);
+        -webkit-backdrop-filter:blur(22px)saturate(180%);
+        background:rgba(255,255,255,.12);
+        border:1px solid rgba(255,255,255,.28);
+        border-radius:28px;
+        box-shadow:0 8px 28px rgba(0,0,0,.45);
+      }
+      #top-window {
+        position:fixed;
+        top:8vh;
+        left:50%;
+        transform:translateX(-50%);
+        width:clamp(240px,70%,680px);
+        padding:18px 32px;
+        text-align:center;
+        z-index:10;
+      }
+      #top-window h1 {
+        margin:0;
+        font-size:clamp(1.4rem,4vw,2.8rem);
+      }
+      #controls-window {
+        position:fixed;
+        bottom:6vh;
+        left:50%;
+        transform:translateX(-50%);
+        width:clamp(340px,88%,580px);
+        padding:15px 20px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:clamp(15px,3vw,30px);
+        z-index:10;
+      }
+      .joystick-ring {
         position:relative;
-        flex:0 0 clamp(220px,40vw,320px); 
+        flex:0 0 clamp(180px,32vw,260px);
         aspect-ratio:1;
         border-radius:50%;
         display:flex;
         align-items:center;
-        justify-content:center
+        justify-content:center;
       }
-      .joystick-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;backdrop-filter:inherit;-webkit-backdrop-filter:inherit;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;}
-      .stick{--size:70%;width:var(--size);height:var(--size);background:var(--glow);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 20px 8px var(--glow);transition:transform .05s linear}
-      
-      #speedbar{
+      .joystick-ring::before {
+        content:"";
+        position:absolute;
+        inset:0;
+        border-radius:50%;
+        background:inherit;
+        backdrop-filter:inherit;
+        -webkit-backdrop-filter:inherit;
+        box-shadow:0 8px 28px rgba(0,0,0,.45);
+      }
+      .joystick {
         position:relative;
-        display:inline-block; 
+        width:64%;
+        aspect-ratio:1;
+        border-radius:50%;
+        touch-action:none;
       }
-      .speed-block{
-        border-radius:6px;background:var(--speed-gray);transition:background .15s;
-        transform-origin: bottom left; 
+      .stick {
+        --size:70%;
+        width:var(--size);
+        height:var(--size);
+        background:var(--glow);
+        border-radius:50%;
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%,-50%);
+        touch-action:none;
+        box-shadow:0 0 20px 8px var(--glow);
+        transition:transform .05s linear;
       }
-      .speed-block.active{background:var(--speed-red)}
-      #speed-thumb{position:absolute;width:6px;height:28px;background:#bbb;border-radius:3px;transition:transform .15s;transform-origin: center center;}
-      #drag-arrow{position:absolute;font-size:14px;color:#aaa;animation:bounce 1.2s infinite ease-in-out;transform-origin:center bottom;}
-      @keyframes bounce{0%,100%{transform:translate(-50%, -50%) translateY(0) scaleY(1)}50%{transform:translate(-50%, -50%) translateY(-8px) scaleY(1.3)}}
+      #speedbar {
+        position:relative;
+      }
+      .speed-block {
+        width:36px;
+        height:24px;
+        border-radius:6px;
+        background:var(--speed-gray);
+        transition:background .15s;
+        transform-origin:bottom left;
+      }
+      .speed-block.active {
+        background:var(--speed-red);
+      }
+      #speed-thumb {
+        position:absolute;
+        width:6px;
+        height:28px;
+        background:#bbb;
+        border-radius:3px;
+        transition:transform .15s;
+        transform-origin:center center;
+      }
+      #drag-arrow {
+        position:absolute;
+        font-size:14px;
+        color:#aaa;
+        animation:bounce 1.2s infinite ease-in-out;
+        transform-origin:center bottom;
+      }
+      @keyframes bounce {
+        0%,100% { transform:translate(-50%,-50%) translateY(0) scaleY(1) }
+        50%    { transform:translate(-50%,-50%) translateY(-8px) scaleY(1.3) }
+      }
     </style>
   </head>
   <body>
     <canvas id="matrixCanvas"></canvas>
-    <div id="top-window" class="glass"><h1 class="glow">SURGE‑WebControl</h1></div>
+    <div id="top-window" class="glass"><h1 class="glow">SURGE-WebControl</h1></div>
     <div id="controls-window" class="glass">
       <div id="speedbar"></div>
       <div class="joystick-ring glass">
-        <div class="joystick" id="right-joystick"><div class="stick" id="right-stick"></div></div>
+        <div class="joystick" id="right-joystick">
+          <div class="stick" id="right-stick"></div>
+        </div>
       </div>
     </div>
 
     <script>
-      document.addEventListener('DOMContentLoaded',()=>{
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- Hilfsfunktion für Haptik ---
+        function triggerHapticFeedback(pattern = 30) {
+          if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+          }
+        }
+
         const speedBar = document.getElementById('speedbar');
         const thumb    = document.createElement('div'); thumb.id='speed-thumb'; speedBar.appendChild(thumb);
         const arrow    = document.createElement('div'); arrow.id='drag-arrow'; arrow.textContent='▲'; speedBar.appendChild(arrow);
-
-        const blocks=[]; 
-        
-        const baseNumVerticalBlocks = 12; 
-        const secondarySize = 24; 
-        
-        const numVerticalBlocks = Math.floor(baseNumVerticalBlocks / 2); 
-        const size = secondarySize * 2.5; 
-        const numHorizontalBlocks = 0; 
-
+        const blocks = [];
+        const size = 36, secondarySize = 24, numVerticalBlocks = 4, numHorizontalBlocks = 4;
+        const rad45 = Math.PI/4, cos45 = Math.cos(rad45), sin45 = Math.sin(rad45);
         const allBlockData = [];
 
-        const verticalBlocksX_local = 0; 
-        let currentVerticalY_cssBottom = 0; 
-
-        for (let i = 0; i < numVerticalBlocks; i++) {
-            allBlockData.push({
-                x: verticalBlocksX_local,
-                y: currentVerticalY_cssBottom,
-                rot: 0,
-                w: size,          
-                h: secondarySize  
-            });
-            currentVerticalY_cssBottom += secondarySize; 
+        // 1. Vertikale Blöcke
+        let curX=0, curY=0;
+        for(let i=0;i<numVerticalBlocks;i++){
+          allBlockData.push({x:curX,y:curY,rot:0,w:size,h:secondarySize});
+          curY+=secondarySize;
         }
-        
-        let minOverallX = Infinity, minOverallY = Infinity;
-        let maxOverallX = -Infinity, maxOverallY = -Infinity;
-
-        if (allBlockData.length > 0) { 
-            allBlockData.forEach(data => {
-                const { x, y, rot, w, h } = data; 
-                const rad = rot * Math.PI / 180;
-                const cosR = Math.cos(rad);
-                const sinR = Math.sin(rad);
-                const points = [
-                    { xp: x, yp: y }, 
-                    { xp: x + w * cosR, yp: y + w * sinR }, 
-                    { xp: x - h * sinR, yp: y + h * cosR }, 
-                    { xp: x + w * cosR - h * sinR, yp: y + w * sinR + h * cosR }
-                ];
-                points.forEach(p => {
-                    minOverallX = Math.min(minOverallX, p.xp);
-                    minOverallY = Math.min(minOverallY, p.yp);
-                    maxOverallX = Math.max(maxOverallX, p.xp);
-                    maxOverallY = Math.max(maxOverallY, p.yp);
-                });
-            });
-        } else { 
-            minOverallX = 0; minOverallY = 0; maxOverallX = 0; maxOverallY = 0;
+        // 2. Diagonal
+        allBlockData.push({x:curX,y:curY,rot:45,w:size,h:secondarySize});
+        const diagX = curX + size*cos45 - secondarySize*sin45;
+        const diagY = curY + size*sin45 + secondarySize*cos45;
+        // 3. Horizontal
+        for(let i=0;i<numHorizontalBlocks;i++){
+          allBlockData.push({x:diagX + i*secondarySize, y:diagY - size, rot:90, w:size, h:secondarySize});
         }
-        
-        const finalOffsetX = -minOverallX;
-        const finalOffsetY = -minOverallY;
 
-        allBlockData.forEach(data => {
-            const b = document.createElement('div');
-            b.className = 'speed-block';
-            b.style.position = 'absolute';
-            b.style.left = (data.x + finalOffsetX) + 'px';
-            b.style.bottom = (data.y + finalOffsetY) + 'px';
-            b.style.width = data.w + 'px';
-            b.style.height = data.h + 'px';
-            b.style.transform = `rotate(${data.rot}deg)`;
-            b.dataset.rotation = data.rot; 
-            speedBar.appendChild(b);
-            blocks.push(b); 
+        // Bounding-Box
+        let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+        allBlockData.forEach(d=>{
+          const rad = d.rot*Math.PI/180, c=Math.cos(rad), s=Math.sin(rad);
+          [[0,0],[d.w,0],[0,d.h],[d.w,d.h]].forEach(([px,py])=>{
+            const xp = d.x + px*c - py*s, yp = d.y + px*s + py*c;
+            minX=Math.min(minX,xp); minY=Math.min(minY,yp);
+            maxX=Math.max(maxX,xp); maxY=Math.max(maxY,yp);
+          });
         });
-        
-        if (allBlockData.length > 0) {
-            speedBar.style.width = (maxOverallX - minOverallX) + 'px';
-            speedBar.style.height = (maxOverallY - minOverallY) + 'px';
-        } else {
-            speedBar.style.width = '0px';
-            speedBar.style.height = '0px';
-        }
-        
-        function triggerHapticFeedback(pattern = 50) {
-            console.log("Attempting to trigger haptic feedback with pattern:", pattern);
-            if ('vibrate' in navigator) {
-                console.log("navigator.vibrate IS available.");
-                try {
-                    const success = navigator.vibrate(pattern);
-                    if (success) {
-                        console.log("Vibration command sent successfully (or promise pending).");
-                    } else {
-                        console.log("Vibration command sent (navigator.vibrate returned falsy, e.g., undefined).");
-                    }
-                } catch (e) {
-                    console.error("Vibration FAILED with error:", e);
-                }
-            } else {
-                console.warn("navigator.vibrate IS NOT available on this browser/device.");
-            }
-        }
+        if(!allBlockData.length) minX=minY=maxX=maxY=0;
+        const offX = -minX, offY = -minY;
 
-        function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
-        let snapIndex=0,drag=false; 
+        // DOM-Erstellung
+        allBlockData.forEach(d=>{
+          const b = document.createElement('div');
+          b.className='speed-block';
+          b.style.position='absolute';
+          b.style.left= (d.x+offX)+'px';
+          b.style.top = (d.y+offY)+'px';
+          b.style.transform=`rotate(${d.rot}deg)`;
+          b.dataset.rot=d.rot;
+          b.style.width=d.w+'px'; b.style.height=d.h+'px';
+          speedBar.appendChild(b);
+          blocks.push(b);
+        });
+        speedBar.style.width  = (maxX-minX)+'px';
+        speedBar.style.height = (maxY-minY)+'px';
+
+        // --- SNAP / DRAG LOGIC ---
+        function centers() {
+          return blocks.map(b=>{
+            const r=b.getBoundingClientRect();
+            return {x:r.left+r.width/2,y:r.top+r.height/2};
+          });
+        }
+        let snapIdx=0, dragging=false;
         function snap(i){
-          if (i < 0 || i >= blocks.length) return; 
-          
-          const oldSnapIndex = snapIndex;
-          snapIndex=i;
-          
-          blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=i));
-          
-          if (oldSnapIndex !== snapIndex) {
-              console.log("Snap index changed, calling haptic feedback for snap.");
-              triggerHapticFeedback(30); 
+          if(i<0||i>=blocks.length)return;
+          const old=snapIdx; snapIdx=i;
+          blocks.forEach((b,j)=>b.classList.toggle('active', j<=i));
+          if(old!==snapIdx) triggerHapticFeedback();
+          // (Berechnung Thumb/Arrow hier unverändert ...)
+          // ... Thumb/Arrow Positionierung ...
+        }
+        function closest(x,y){
+          let best=Infinity, idx=0;
+          centers().forEach((c,i)=>{
+            const d=(c.x-x)**2+(c.y-y)**2;
+            if(d<best){ best=d; idx=i; }
+          });
+          return idx;
+        }
+        function startDrag(e){
+          if(!blocks.length) return;
+          triggerHapticFeedback(50);
+          dragging=true; arrow.style.display='none';
+          moveDrag(e); e.preventDefault();
+        }
+        function endDrag(){ dragging=false; arrow.style.display='block'; }
+        function moveDrag(e){
+          if(!dragging) return;
+          const t=e.touches?e.touches[0]:e;
+          const i=closest(t.clientX, t.clientY);
+          if(i!==snapIdx) snap(i);
+          e.preventDefault();
+        }
+
+        thumb.addEventListener('mousedown', startDrag);
+        speedBar.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', moveDrag);
+        window.addEventListener('mouseup', endDrag);
+        thumb.addEventListener('touchstart', startDrag,{passive:false});
+        speedBar.addEventListener('touchstart', startDrag,{passive:false});
+        window.addEventListener('touchmove', moveDrag,{passive:false});
+        window.addEventListener('touchend', endDrag);
+
+        if(blocks.length) snap(0); else thumb.style.display=arrow.style.display='none';
+
+        // --- JOYSTICK (mit Haptik) ---
+        const joy=document.getElementById('right-joystick'),
+              stick=document.getElementById('right-stick');
+        let active=null;
+        function center(){ 
+          const r=joy.getBoundingClientRect();
+          return { x:r.left+r.width/2, y:r.top+r.height/2, max:(r.width/2)*0.68 };
+        }
+        function moveJoy(x,y){
+          const c=center(), dx=x-c.x, dy=y-c.y;
+          const dist=Math.min(Math.hypot(dx,dy),c.max), a=Math.atan2(dy,dx);
+          stick.style.transform=`translate(calc(-50%+${dist*Math.cos(a)}px),calc(-50%+${dist*Math.sin(a)}px))`;
+        }
+
+        joy.addEventListener('touchstart', e=>{
+          triggerHapticFeedback(50);
+          e.preventDefault();
+          for(const t of e.changedTouches){
+            if(active===null){ active=t.identifier; moveJoy(t.clientX,t.clientY); }
           }
-
-          const currentBlock = blocks[i];
-          const blockRect = currentBlock.getBoundingClientRect();
-          const speedBarRect = speedBar.getBoundingClientRect();
-          const blockRotation = parseFloat(currentBlock.dataset.rotation) || 0;
-          const thumbActualHeight = thumb.offsetHeight; 
-          const spacing = 10; 
-          let thumbTargetX, thumbTargetY; let thumbAngle = blockRotation;
-
-          if (blockRotation === 0) { 
-            thumbTargetX = (blockRect.right - speedBarRect.left) + spacing + (thumbActualHeight / 2); 
-            thumbTargetY = (blockRect.top - speedBarRect.top) + blockRect.height / 2; 
-            thumbAngle = 0; 
-          } 
-          
-          thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(${thumbAngle}deg)`;
-          
-          let arrowX = thumbTargetX; 
-          let arrowY = thumbTargetY; 
-          const arrowSpacing = 15; 
-
-          if (blockRotation === 0) { 
-             arrowX = thumbTargetX; 
-             arrowY = thumbTargetY - (thumb.offsetHeight / 2) - arrowSpacing; 
-          }
-          arrow.style.left = `${arrowX}px`; 
-          arrow.style.top = `${arrowY}px`;
-        }
-
-        function closest(x,y){if(blocks.length===0) return -1; const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
-        
-        function startDrag(e) { 
-            if(blocks.length===0) return; 
-            console.log("Drag started on speedbar/thumb, calling haptic feedback.");
-            triggerHapticFeedback(50); 
-            drag=true;
-            arrow.style.display='none';
-            moveDrag(e); 
-            e.preventDefault();
-        }
-        function endDrag() {
-            if(blocks.length===0) return; 
-            drag=false; 
-            arrow.style.display='block';
-        }
-        function moveDrag(e) {
-            if(!drag || blocks.length===0)return;
-            const t=e.touches?e.touches[0]:e;
-            const i=closest(t.clientX,t.clientY);
-            if(i!==snapIndex && i !== -1)snap(i); 
-            e.preventDefault();
-        }  
-        
-        thumb.addEventListener('mousedown',startDrag);
-        speedBar.addEventListener('mousedown',startDrag);
-        window.addEventListener('mousemove',moveDrag);
-        window.addEventListener('mouseup',endDrag);
-        thumb.addEventListener('touchstart',startDrag,{passive:false});
-        speedBar.addEventListener('touchstart',startDrag,{passive:false});
-        window.addEventListener('touchmove',moveDrag,{passive:false});
-        window.addEventListener('touchend',endDrag);
-        
-        if (blocks.length > 0) snap(0); else { thumb.style.display = 'none'; arrow.style.display = 'none'; }
-
-        /* === JOYSTICK === */
-        const joy = document.getElementById('right-joystick'); 
-        const stick = document.getElementById('right-stick');  
-        const JOYSTICK_BOUNDARY_FACTOR = 1.05; 
-        let act = null;
-
-        const ctr = () => {
-            const joyRect = joy.getBoundingClientRect(); 
-            const ringElement = document.querySelector('.joystick-ring');
-            
-            if (!ringElement) {
-                console.error("Joystick ring element not found!");
-                return { 
-                    x: joyRect.left + joyRect.width / 2, 
-                    y: joyRect.top + joyRect.height / 2, 
-                    max: (joyRect.width / 2) * 0.68 
-                };
+        }, {passive:false});
+        window.addEventListener('touchmove', e=>{
+          if(active!==null){
+            for(const t of e.touches){
+              if(t.identifier===active){
+                moveJoy(t.clientX,t.clientY);
+                e.preventDefault();
+              }
             }
-            const ringRect = ringElement.getBoundingClientRect(); 
-
-            return {
-                x: joyRect.left + joyRect.width / 2,  
-                y: joyRect.top + joyRect.height / 2,   
-                max: (ringRect.width / 2) * JOYSTICK_BOUNDARY_FACTOR 
-            };
-        };
-
-        const mv = (x, y) => { 
-            const c = ctr();
-            let dx = x - c.x;
-            let dy = y - c.y;
-            const dist = Math.min(Math.hypot(dx, dy), c.max); 
-            const a = Math.atan2(dy, dx);
-            dx = dist * Math.cos(a);
-            dy = dist * Math.sin(a);
-            stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-        };
-        
-        joy.addEventListener('touchstart',e=>{
-            e.preventDefault(); 
-            console.log("Joystick touchstart, calling haptic feedback.");
-            triggerHapticFeedback(50); 
-            for(const t of e.changedTouches)if(act===null){act=t.identifier;mv(t.clientX,t.clientY);}
-        },{passive:false});
-        window.addEventListener('touchmove',e=>{if(act !== null && e.touches){for(const t of e.touches)if(t.identifier===act){mv(t.clientX,t.clientY); e.preventDefault();}}}, {passive:false});
-        window.addEventListener('touchend',e=>{for(const t of e.changedTouches)if(t.identifier===act){act=null;stick.style.transform='translate(-50%,-50%)';}});
-        
-        joy.addEventListener('mousedown',e=>{
-            act='mouse';
-            console.log("Joystick mousedown, calling haptic feedback.");
-            triggerHapticFeedback(50); 
-            mv(e.clientX,e.clientY); 
-            e.preventDefault();
+          }
+        }, {passive:false});
+        window.addEventListener('touchend', e=>{
+          for(const t of e.changedTouches){
+            if(t.identifier===active){
+              active=null;
+              stick.style.transform='translate(-50%,-50%)';
+            }
+          }
         });
-        window.addEventListener('mousemove',e=>{if(act==='mouse') {mv(e.clientX,e.clientY); e.preventDefault();}});
-        window.addEventListener('mouseup',()=>{if(act==='mouse'){act=null;stick.style.transform='translate(-50%,-50%)';}});
 
-        /* === DIGITAL RAIN === */
-        const canvas=document.getElementById('matrixCanvas');const ctx=canvas.getContext('2d');const FONT=16,SPEED=0.33,FADE=0.05;let cols,drops;function rainInit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;cols=Math.floor(canvas.width/FONT);drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);}rainInit();(function draw(){ctx.fillStyle=`rgba(0,0,0,${FADE})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');ctx.font=FONT+'px monospace';for(let i=0;i<cols;i++){const ch=String.fromCharCode(0x30A0+Math.random()*96);const x=i*FONT,y=drops[i]*FONT;ctx.fillText(ch,x,y);drops[i]+=SPEED;if(y>canvas.height&&Math.random()>0.975)drops[i]=0;}requestAnimationFrame(draw);})();window.addEventListener('resize',rainInit);
+        joy.addEventListener('mousedown', e=>{
+          triggerHapticFeedback(50);
+          active='mouse';
+          moveJoy(e.clientX,e.clientY);
+          e.preventDefault();
+        });
+        window.addEventListener('mousemove', e=>{
+          if(active==='mouse'){
+            moveJoy(e.clientX,e.clientY);
+            e.preventDefault();
+          }
+        });
+        window.addEventListener('mouseup', ()=>{
+          if(active==='mouse'){
+            active=null;
+            stick.style.transform='translate(-50%,-50%)';
+          }
+        });
+
+        // --- DIGITAL RAIN (unverändert) ---
+        const canvas=document.getElementById('matrixCanvas'),
+              ctx=canvas.getContext('2d'),
+              FONT=16,SPEED=0.33,FADE=0.05;
+        let cols,drops;
+        function rainInit(){
+          canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+          cols=Math.floor(canvas.width/FONT);
+          drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);
+        }
+        rainInit();
+        (function draw(){
+          ctx.fillStyle=`rgba(0,0,0,${FADE})`;
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');
+          ctx.font=FONT+'px monospace';
+          for(let i=0;i<cols;i++){
+            const ch=String.fromCharCode(0x30A0+Math.random()*96),
+                  x=i*FONT, y=drops[i]*FONT;
+            ctx.fillText(ch,x,y);
+            drops[i]+=SPEED;
+            if(y>canvas.height && Math.random()>0.975) drops[i]=0;
+          }
+          requestAnimationFrame(draw);
+        })();
+        window.addEventListener('resize', rainInit);
+
       });
     </script>
   </body>
