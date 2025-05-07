@@ -1,1 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CONTROL‑SEARCH!!!</title>
 
+    <!-- Nasalization Font (primary) with Orbitron as silent fallback -->
+    <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome 6 icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-bugHuflTqEZZ2uRiKqdF6RxQ9WG/jc2LGJtIDiCGk4BmSL7xIuiKdVhK1hO6Jp5ablZGjDVqdDriLetr7vV0Lg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <style>
+      :root {
+        --accent: #24fff4;
+      }
+
+      /* ---------- GLOBAL ---------- */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: radial-gradient(
+            at 50% -10%,
+            rgba(36, 255, 244, 0.18) 0%,
+            rgba(0, 0, 0, 0.94) 55%
+          )
+          #000;
+        color: #fff;
+        font-family: "Nasalization", "Orbitron", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+
+      .glow {
+        text-shadow: 0 0 6px var(--accent), 0 0 14px var(--accent), 0 0 28px var(--accent);
+        letter-spacing: 0.06em;
+      }
+
+      /* ---------- GLASS CARD ---------- */
+      .glass {
+        backdrop-filter: blur(28px) saturate(160%);
+        -webkit-backdrop-filter: blur(28px) saturate(160%);
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 24px;
+        box-shadow: 0 4px 22px rgba(0, 0, 0, 0.45);
+      }
+
+      /* ---------- HEADER ---------- */
+      header {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 10px 28px;
+      }
+
+      header h1 {
+        font-size: clamp(1.8rem, 4vw, 3.4rem);
+        margin: 0;
+      }
+
+      .icons {
+        display: flex;
+        gap: 18px;
+        font-size: 1.4rem;
+      }
+      .icons i {
+        cursor: pointer;
+        transition: transform 0.18s;
+      }
+      .icons i:hover {
+        transform: scale(1.15);
+        color: var(--accent);
+      }
+
+      /* ---------- JOYSTICKS ---------- */
+      .joystick {
+        position: fixed;
+        width: clamp(120px, 18vw, 200px);
+        aspect-ratio: 1/1;
+        border-radius: 50%;
+        touch-action: none;
+        overflow: hidden;
+      }
+
+      #left-joystick {
+        bottom: 24px;
+        left: 24px;
+      }
+      #right-joystick {
+        bottom: 24px;
+        right: 24px;
+      }
+
+      .stick {
+        --size: 40%;
+        width: var(--size);
+        height: var(--size);
+        background: var(--accent);
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        touch-action: none;
+        box-shadow: 0 0 12px 4px var(--accent);
+        transition: transform 0.05s linear;
+      }
+
+      /* ---------- UTILS ---------- */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER ------------------------------------------------------------ -->
+    <header class="glass">
+      <h1 class="glow">CONTROL‑SEARCH!!!</h1>
+      <div class="icons">
+        <i class="fa-solid fa-bluetooth-b"></i>
+        <i class="fa-solid fa-gear"></i>
+      </div>
+    </header>
+
+    <!-- JOYSTICKS --------------------------------------------------------- -->
+    <div class="joystick glass" id="left-joystick">
+      <div class="stick" id="left-stick"></div>
+    </div>
+    <div class="joystick glass" id="right-joystick">
+      <div class="stick" id="right-stick"></div>
+    </div>
+
+    <!-- SCRIPT ------------------------------------------------------------ -->
+    <script>
+      function initJoystick(joyId, stickId) {
+        const joy = document.getElementById(joyId);
+        const stick = document.getElementById(stickId);
+        const JOY_LIMIT = 0.4; // 40 % radius
+        let activeId = null;
+
+        const center = () => {
+          const r = joy.getBoundingClientRect();
+          return { x: r.left + r.width / 2, y: r.top + r.height / 2, max: (r.width / 2) * JOY_LIMIT };
+        };
+
+        joy.addEventListener("touchstart", (e) => {
+          for (const t of e.changedTouches) {
+            if (joy.contains(t.target) && activeId === null) {
+              activeId = t.identifier;
+            }
+          }
+        });
+
+        joy.addEventListener("touchmove", (e) => {
+          for (const t of e.touches) {
+            if (t.identifier === activeId) {
+              const c = center();
+              let dx = t.clientX - c.x;
+              let dy = t.clientY - c.y;
+
+              const dist = Math.min(Math.hypot(dx, dy), c.max);
+              const ang = Math.atan2(dy, dx);
+              dx = dist * Math.cos(ang);
+              dy = dist * Math.sin(ang);
+
+              stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+              // TODO: send Bluetooth data here
+            }
+          }
+        });
+
+        joy.addEventListener("touchend", (e) => {
+          for (const t of e.changedTouches) {
+            if (t.identifier === activeId) {
+              activeId = null;
+              stick.style.transform = "translate(-50%, -50%)";
+            }
+          }
+        });
+      }
+
+      initJoystick("left-joystick", "left-stick");
+      initJoystick("right-joystick", "right-stick");
+    </script>
+  </body>
+</html>
