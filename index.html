@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>SURGE‑WebControl</title>
 
     <!-- Nasalization Font -->
@@ -17,198 +16,237 @@
       }
     </style>
 
-    <!-- Font Awesome Icons -->
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-bugHuflTqEZZ2uRiKqdF6RxQ9WG/jc2LGJtIDiCGk4BmSL7xIuiKdVhK1hO6Jp5ablZGjDVqdDriLetr7vV0Lg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
       :root {
         --matrix: #24fff4;
         --glow  : #ffffff;
-        --speed-gray: rgba(255,255,255,0.25);
+        --speed-gray: rgba(255,255,255,0.28);
         --speed-red : #ff4040;
+        --bar-gap: 10px; /* Beibehalten für JS-Logik, obwohl Blöcke jetzt aneinander liegen */
       }
 
-      /* ---------- GLOBAL ---------- */
-      html, body {
-        margin: 0;
-        height: 100%;
-        background: #000;
-        color: #fff;
-        font-family: "Nasalization", sans-serif;
-        overflow: hidden;
-        -webkit-font-smoothing: antialiased;
-      }
-      .glow { text-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow), 0 0 32px var(--glow); letter-spacing: .06em; }
+      /* GLOBAL -------------------------------------------------- */
+      html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Nasalization",sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+      .glow{color:#fff;text-shadow:0 0 8px var(--glow),0 0 20px var(--glow)}
 
-      /* ---------- CANVAS (DIGITAL RAIN) ---------- */
-      #matrixCanvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+      /* CANVAS (digital rain) ---------------------------------- */
+      #matrixCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 
-      /* ---------- BLUR‑GLASS ---------- */
-      .glass {
-        backdrop-filter: blur(22px) saturate(180%);
-        -webkit-backdrop-filter: blur(22px) saturate(180%);
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.28);
-        border-radius: 28px;
-        box-shadow: 0 8px 28px rgba(0,0,0,0.45);
-      }
+      /* BLUR‑GLASS --------------------------------------------- */
+      .glass{backdrop-filter:blur(22px)saturate(180%);-webkit-backdrop-filter:blur(22px)saturate(180%);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:28px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
 
       /* TOP BAR */
-      #top-window { position: fixed; top: 8vh; left: 50%; transform: translateX(-50%); width: clamp(240px, 70%, 680px); padding: 18px 32px; text-align: center; z-index: 10; }
-      #top-window h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2.8rem); }
+      #top-window{position:fixed;top:8vh;left:50%;transform:translateX(-50%);width:clamp(240px,70%,680px);padding:18px 32px;text-align:center;z-index:10}
+      #top-window h1{margin:0;font-size:clamp(1.4rem,4vw,2.8rem)}
 
       /* CONTROL BAR */
-      #controls-window { position: fixed; bottom: 6vh; left: 50%; transform: translateX(-50%); width: clamp(340px, 92%, 1200px); padding: clamp(30px, 5vw, 50px); display: flex; justify-content: space-between; align-items: center; gap: clamp(40px, 8vw, 100px); z-index: 10; }
+      #controls-window{
+        position:fixed;
+        bottom:6vh;left:50%;
+        transform:translateX(-50%);
+        width:clamp(320px,90%,600px); /* Verkleinert */
+        padding:20px 25px; /* Verkleinert */
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:clamp(25px,5vw,50px); /* Verkleinert */
+        z-index:10
+      }
 
-      /* ---------- JOYSTICK + RING ---------- */
-      .joystick-ring { position: relative; flex: 0 0 clamp(220px, 38vw, 320px); aspect-ratio: 1 / 1; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-      .joystick-ring::before { /* extra blur ring overlay */ content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; backdrop-filter: inherit; -webkit-backdrop-filter: inherit; box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
+      /* JOYSTICK (larger, free roam) */
+      .joystick-ring{position:relative;flex:0 0 clamp(200px,35vw,280px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center} /* Flex-Basis angepasst */
+      .joystick-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;backdrop-filter:inherit;-webkit-backdrop-filter:inherit;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;} /* overflow:hidden entfernt */
+      .stick{--size:70%;width:var(--size);height:var(--size);background:var(--glow);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 20px 8px var(--glow);transition:transform .05s linear} /* Größe erhöht */
 
-      .joystick { position: relative; width: 62%; aspect-ratio: 1 / 1; border-radius: 50%; overflow: hidden; touch-action: none; }
-      .stick   { --size: 45%; width: var(--size); height: var(--size); background: var(--glow); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); touch-action: none; box-shadow: 0 0 16px 6px var(--glow); transition: transform 0.05s linear; }
-
-      /* ---------- SPEED BAR ---------- */
-      #speedbar { position: relative; width: clamp(120px, 22vw, 260px); height: clamp(160px, 40vh, 320px); display: flex; }
-      /* grid container to place vertical + horizontal */
-      #speedbar .vertical   { display: flex; flex-direction: column-reverse; justify-content: flex-start; gap: 14px; }
-      #speedbar .horizontal { display: flex; flex-direction: row; gap: 14px; margin-left: 14px; margin-top: -4px; }
-
-      .speed-block { width: 34px; height: 22px; border-radius: 6px; background: var(--speed-gray); transition: background .15s; }
-      .speed-block.active { background: var(--speed-red); }
-
-      /* Slider bar */
-      #speed-thumb { position: absolute; width: 6px; height: 26px; background: #aaa; border-radius: 3px; left: -12px; bottom: 0; transition: top .15s, left .15s, bottom .15s; }
-
-      /* Bounce arrow */
-      #drag-arrow { position: absolute; left: -14px; bottom: 34px; font-size: 14px; color: #aaa; animation: bounce 1.3s infinite ease-in-out; transform-origin: center bottom; }
-      @keyframes bounce { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-8px) scaleY(1.3);} }
+      /* SPEED BAR L‑shape */
+      #speedbar{position:relative;display:inline-block}
+      .speed-block{width:36px;height:24px;border-radius:6px;background:var(--speed-gray);transition:background .15s}
+      .speed-block.active{background:var(--speed-red)}
+      /* individual positions will be absolute via JS */
+      #speed-thumb{
+        position:absolute;
+        width:6px;height:28px;
+        background:#bbb;
+        border-radius:3px;
+        transition:transform .15s;
+        transform-origin: center center; /* Wichtig für Rotation */
+      }
+      #drag-arrow{
+        position:absolute; /* Wird via JS transformiert */
+        font-size:14px;
+        color:#aaa;
+        animation:bounce 1.2s infinite ease-in-out;
+        transform-origin:center bottom;
+        /* Initial transform is set in JS */
+      }
+      @keyframes bounce{0%,100%{transform:translate(-50%, -50%) translateY(0) scaleY(1)}50%{transform:translate(-50%, -50%) translateY(-8px) scaleY(1.3)}}
     </style>
   </head>
-
   <body>
     <canvas id="matrixCanvas"></canvas>
 
     <div id="top-window" class="glass"><h1 class="glow">SURGE‑WebControl</h1></div>
 
     <div id="controls-window" class="glass">
-      <!-- SPEED BAR L‑shape -->
-      <div id="speedbar">
-        <div class="vertical"></div>
-        <div class="horizontal"></div>
-        <div id="speed-thumb"></div>
-        <div id="drag-arrow">▲</div>
-      </div>
-      <!-- RIGHT JOYSTICK WITH RING -->
+      <!-- SPEED BAR -->
+      <div id="speedbar"></div>
+      <!-- RIGHT JOYSTICK -->
       <div class="joystick-ring glass">
         <div class="joystick" id="right-joystick"><div class="stick" id="right-stick"></div></div>
       </div>
     </div>
 
     <script>
-      /* -------------- BUILD SPEED BAR BLOCKS -------------- */
-      const verticalCount   = 4;
-      const horizontalCount = 4;
-      const vertContainer   = document.querySelector('#speedbar .vertical');
-      const horzContainer   = document.querySelector('#speedbar .horizontal');
-      const allBlocks       = [];
+      document.addEventListener('DOMContentLoaded',()=>{
+        /* === SPEED BAR SETUP === */
+        const speedBar = document.getElementById('speedbar');
+        const thumb    = document.createElement('div'); thumb.id='speed-thumb'; speedBar.appendChild(thumb);
+        const arrow    = document.createElement('div'); arrow.id='drag-arrow'; arrow.textContent='▲'; speedBar.appendChild(arrow);
 
-      for (let i = 0; i < verticalCount; i++) {
-        const b = document.createElement('div'); b.className = 'speed-block'; vertContainer.appendChild(b); allBlocks.push(b);
-      }
-      for (let i = 0; i < horizontalCount; i++) {
-        const b = document.createElement('div'); b.className = 'speed-block'; horzContainer.appendChild(b); allBlocks.push(b);
-      }
+        const blocks=[];
+        const size = 36; // Hauptdimension der Blöcke (Breite für vertikale, Höhe für horizontale)
+        const secondarySize = 24; // Nebendimension
+        const gap=10; // Beibehalten für JS-Abstandsberechnungen, Blöcke selbst liegen aneinander
 
-      /* -------------- SPEED THUMB INTERACTION -------------- */
-      const thumb  = document.getElementById('speed-thumb');
-      const arrow  = document.getElementById('drag-arrow');
-      const bar    = document.getElementById('speedbar');
-      let dragging = false;
-      const blockCenters = () => allBlocks.map(b => { const r = b.getBoundingClientRect(); return { b, x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+        // create Funktion speichert Rotation
+        const create=(x,y,rot=0)=>{
+            const b=document.createElement('div');
+            b.className='speed-block';
+            b.style.position='absolute';
+            b.style.left=x+'px';
+            b.style.bottom=y+'px';
+            b.style.transform=`rotate(${rot}deg)`;
+            // Korrektur für transform-origin bei rotierten Elementen für Layout
+            if (rot === 45) { // Diagonaler Block
+                 b.style.transformOrigin = 'bottom left';
+            } else if (rot === 90) { // Horizontaler Block
+                 b.style.transformOrigin = 'bottom left';
+            }
+            b.dataset.rotation = rot; // Speichere Rotation für Thumb-Logik
+            speedBar.appendChild(b);
+            blocks.push(b);
+        };
+        
+        // Vertikale Blöcke (0-3)
+        for(let i=0;i<4;i++) create(0, i * secondarySize, 0); // Kein Gap zwischen Blöcken
+        // Diagonal
+        // Positionierung des diagonalen Blocks, sodass er an den letzten vertikalen anschließt
+        // Letzter vertikaler Block endet bei y = 3 * secondarySize + secondarySize = 4 * secondarySize
+        // Diagonaler Block startet links bei x = 0, y = 4 * secondarySize
+        create(0, 4 * secondarySize, 45);
+        // Horizontale Blöcke (rechts davon)
+        // Der diagonale Block (36x24 rotiert um 45°) hat eine projizierte Breite und Höhe.
+        // Breite_proj = 36*cos(45) + 24*sin(45) = (36+24)/sqrt(2) ~ 42.4
+        // Höhe_proj = 36*sin(45) + 24*cos(45) = (36+24)/sqrt(2) ~ 42.4
+        // Startpunkt für horizontale Blöcke:
+        const diagBlockEffectiveWidth = (size + secondarySize) / Math.sqrt(2); // Ungefähre Breite der Diagonale
+        const diagBlockEffectiveHeight = (size + secondarySize) / Math.sqrt(2); // Ungefähre Höhe der Diagonale
 
-      function snapTo(index) {
-        // mark active blocks red up to index
-        allBlocks.forEach((b,i)=> b.classList.toggle('active', i <= index));
-        // move thumb to side of selected block
-        const r = allBlocks[index].getBoundingClientRect();
-        const barRect = bar.getBoundingClientRect();
-        const offsetX = (index < verticalCount) ? -12 : -6 + (index - verticalCount + 1)*48; // adjust for horizontal shift
-        const offsetY = (index < verticalCount) ? (verticalCount-1-index)*36 : -12;
-        thumb.style.left  = offsetX + 'px';
-        thumb.style.bottom = (0 + index*0) + 'px';
-        // simpler: absolute within bar using transform
-        thumb.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-      }
+        for(let i=0;i<4;i++) create(diagBlockEffectiveWidth + i * secondarySize, (4 * secondarySize) + diagBlockEffectiveHeight - secondarySize, 90);
 
-      let currentIdx = 0;
-      snapTo(currentIdx);
 
-      function closestBlock(x,y){
-        const centers = blockCenters();
-        let min = Infinity, idx=0;
-        centers.forEach((c,i)=>{ const d = (c.x-x)**2 + (c.y-y)**2; if (d<min){min=d; idx=i;} });
-        return idx;
-      }
+        // adjust bar size
+        // Max x: diagBlockEffectiveWidth + 4 * secondarySize
+        // Max y: 4 * secondarySize + diagBlockEffectiveHeight
+        speedBar.style.width = (diagBlockEffectiveWidth + 4 * secondarySize) + 'px';
+        speedBar.style.height = (4 * secondarySize + diagBlockEffectiveHeight) + 'px';
 
-      function startDrag(e){ dragging=true; arrow.style.display='none'; onMove(e); }
-      function endDrag(){ dragging=false; }
-      function onMove(e){ if(!dragging) return; const touch=e.touches?e.touches[0]:e; const idx=closestBlock(touch.clientX,touch.clientY); if(idx!==currentIdx){ currentIdx=idx; snapTo(idx);} }
 
-      thumb.addEventListener('touchstart', startDrag);
-      bar.addEventListener('touchstart', startDrag);
-      window.addEventListener('touchmove', onMove);
-      window.addEventListener('touchend', endDrag);
-      thumb.addEventListener('mousedown', e=>{ e.preventDefault(); startDrag(e); });
-      bar.addEventListener('mousedown', e=>{ startDrag(e); });
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', endDrag);
+        /* SNAP / DRAG LOGIC */
+        function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
+        let index=0,drag=false;
 
-      /* -------------- DIGITAL RAIN -------------- */
-      (() => {
-        const canvas = document.getElementById('matrixCanvas');
-        const ctx    = canvas.getContext('2d');
-        const FONT   = 16; // px
-        const SPEED  = 0.33; // rows per frame
-        const FADE   = 0.05;
-        let cols, drops;
+        function snap(i){
+          index=i;
+          blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=i));
+          
+          const currentBlock = blocks[i];
+          const blockRect = currentBlock.getBoundingClientRect();
+          const speedBarRect = speedBar.getBoundingClientRect();
+          const blockRotation = parseFloat(currentBlock.dataset.rotation) || 0;
 
-        function init() {
-          canvas.width  = window.innerWidth;
-          canvas.height = window.innerHeight;
-          cols  = Math.floor(canvas.width / FONT);
-          drops = Array.from({ length: cols }, () => Math.random()*canvas.height/FONT);
-        }
-        function draw() {
-          ctx.fillStyle=`rgba(0,0,0,${FADE})`; ctx.fillRect(0,0,canvas.width,canvas.height);
-          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--matrix') || '#24fff4';
-          ctx.font = FONT+'px monospace';
-          for(let i=0;i<cols;i++){
-            const char = String.fromCharCode(0x30A0+Math.random()*96);
-            const x=i*FONT; const y=drops[i]*FONT;
-            ctx.fillText(char,x,y);
-            drops[i]+=SPEED;
-            if(y>canvas.height && Math.random()>0.975) drops[i]=0;
+          const thumbWidth = thumb.offsetWidth;
+          const thumbHeight = thumb.offsetHeight;
+          const spacing = 10; // 10 Punkte Abstand
+
+          let thumbTargetX, thumbTargetY; // Ziel-Koordinaten für den Mittelpunkt des Thumbs
+          let thumbAngle = blockRotation;
+
+          if (blockRotation === 0) { // Vertikaler Block
+            thumbTargetX = (blockRect.right - speedBarRect.left) + spacing + thumbWidth / 2;
+            thumbTargetY = (blockRect.top - speedBarRect.top) + blockRect.height / 2;
+          } else if (blockRotation === 90) { // Horizontaler Block
+            thumbTargetX = (blockRect.left - speedBarRect.left) + blockRect.width / 2;
+            thumbTargetY = (blockRect.bottom - speedBarRect.top) + spacing + thumbHeight / 2; // ThumbHeight, da es um 90° gedreht wird
+          } else { // 45° Diagonaler Block
+            const blockCenterX = (blockRect.left - speedBarRect.left) + blockRect.width / 2;
+            const blockCenterY = (blockRect.top - speedBarRect.top) + blockRect.height / 2;
+            
+            // Vektor, der vom Blockzentrum nach außen zeigt (senkrecht zur Blockausrichtung)
+            const outwardAngleRad = (blockRotation + 90) * Math.PI / 180; 
+            // Ungefährer Abstand vom Blockzentrum zum äußeren Rand + spacing + halbe Thumb-Breite
+            // Nehmen wir die halbe "Hauptdimension" des Blocks als Referenz für den Radius
+            const effectiveBlockRadius = Math.max(blockRect.width, blockRect.height) / Math.sqrt(8); // sqrt(8) weil es rotiert ist und wir ca. eine Kante wollen
+            const offsetMagnitude = effectiveBlockRadius + spacing + Math.max(thumbWidth, thumbHeight) / 2;
+
+            thumbTargetX = blockCenterX + offsetMagnitude * Math.cos(outwardAngleRad);
+            thumbTargetY = blockCenterY + offsetMagnitude * Math.sin(outwardAngleRad);
           }
-          requestAnimationFrame(draw);
-        }
-        init(); draw(); window.addEventListener('resize',init);
-      })();
+          
+          thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(${thumbAngle}deg)`;
 
-      /* -------------- JOYSTICK -------------- */
-      function initJoystick(joyId,stickId){
-        const joy=document.getElementById(joyId);
-        const stick=document.getElementById(stickId);
-        const LIMIT=0.4; let active=null;
-        const center=()=>{const r=joy.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,max:(r.width/2)*LIMIT}};
-        const handleMove=(x,y)=>{const c=center();let dx=x-c.x;let dy=y-c.y;const dist=Math.min(Math.hypot(dx,dy),c.max);const ang=Math.atan2(dy,dx);dx=dist*Math.cos(ang);dy=dist*Math.sin(ang);stick.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;};
-        joy.addEventListener('touchstart',e=>{for(const t of e.changedTouches) if(active===null){active=t.identifier;handleMove(t.clientX,t.clientY);}});
-        window.addEventListener('touchmove',e=>{for(const t of e.touches) if(t.identifier===active) handleMove(t.clientX,t.clientY);});
-        window.addEventListener('touchend',e=>{for(const t of e.changedTouches) if(t.identifier===active){active=null;stick.style.transform='translate(-50%, -50%)';}});
-        joy.addEventListener('mousedown',e=>{active='mouse';handleMove(e.clientX,e.clientY);});
-        window.addEventListener('mousemove',e=>{if(active==='mouse') handleMove(e.clientX,e.clientY);});
-        window.addEventListener('mouseup',()=>{if(active==='mouse'){active=null;stick.style.transform='translate(-50%, -50%)';}});
-      }
-      initJoystick('right-joystick','right-stick');
+          // Arrow positionieren - etwas "über" dem Thumb (in Richtung der L-Form-Progression)
+          // Relativ zum Thumb-Mittelpunkt, aber nicht rotiert
+          let arrowX = thumbTargetX;
+          let arrowY = thumbTargetY;
+          const arrowOffset = 25; // Wie weit der Pfeil vom Thumb-Zentrum entfernt ist
+
+          if (blockRotation === 0) arrowY -= arrowOffset; // Über dem vertikalen Thumb
+          else if (blockRotation === 90) arrowX += arrowOffset; // Rechts vom horizontalen Thumb (progression)
+          else { // Diagonal
+            const arrowAngleRad = (blockRotation - 45) * Math.PI / 180; // Entlang der "aufsteigenden" Diagonale
+            arrowX += arrowOffset * Math.cos(arrowAngleRad);
+            arrowY -= arrowOffset * Math.sin(arrowAngleRad); // Y geht nach oben bei kleinerem Wert
+          }
+          // Der Pfeil selbst soll nicht rotieren, aber seine Bounce-Animation hat transform-origin: center bottom
+          // Die translate(-50%, -50%) ist für die Bounce-Animation wichtig, damit sie vom Zentrum aus "hüpft"
+          arrow.style.left = `${arrowX}px`;
+          arrow.style.top = `${arrowY}px`;
+          // Die Bounce Animation wird `translate(-50%, -50%)` anwenden, also müssen wir das nicht hier tun
+        }
+
+        function closest(x,y){const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
+        function start(e){drag=true;arrow.style.display='none';move(e); e.preventDefault();}   
+        function end(){drag=false; arrow.style.display='block';}  
+        function move(e){if(!drag)return;const t=e.touches?e.touches[0]:e;const i=closest(t.clientX,t.clientY);if(i!==index)snap(i); e.preventDefault();}  
+        
+        thumb.addEventListener('mousedown',start);speedBar.addEventListener('mousedown',start);window.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+        thumb.addEventListener('touchstart',start,{passive:false});speedBar.addEventListener('touchstart',start,{passive:false});window.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',end);
+        snap(0); // Initial snap
+
+        /* === JOYSTICK === */
+        const joy=document.getElementById('right-joystick');const stick=document.getElementById('right-stick');
+        const LIMIT=0.68; // Erhöht für mehr Bewegungsfreiheit
+        let act=null;
+        const ctr=()=>{const r=joy.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,max:(r.width/2)*LIMIT}};
+        const mv=(x,y)=>{const c=ctr();let dx=x-c.x,dy=y-c.y;const dist=Math.min(Math.hypot(dx,dy),c.max);const a=Math.atan2(dy,dx);dx=dist*Math.cos(a);dy=dist*Math.sin(a);stick.style.transform=`translate(calc(-50%+${dx}px),calc(-50%+${dy}px))`;};
+        joy.addEventListener('touchstart',e=>{e.preventDefault(); for(const t of e.changedTouches)if(act===null){act=t.identifier;mv(t.clientX,t.clientY);}},{passive:false});
+        window.addEventListener('touchmove',e=>{if(act !== null && e.touches){for(const t of e.touches)if(t.identifier===act){mv(t.clientX,t.clientY); e.preventDefault();}}}, {passive:false});
+        window.addEventListener('touchend',e=>{for(const t of e.changedTouches)if(t.identifier===act){act=null;stick.style.transform='translate(-50%,-50%)';}});
+        joy.addEventListener('mousedown',e=>{act='mouse';mv(e.clientX,e.clientY); e.preventDefault();});
+        window.addEventListener('mousemove',e=>{if(act==='mouse') {mv(e.clientX,e.clientY); e.preventDefault();}});
+        window.addEventListener('mouseup',()=>{if(act==='mouse'){act=null;stick.style.transform='translate(-50%,-50%)';}});
+
+        /* === DIGITAL RAIN === */
+        const canvas=document.getElementById('matrixCanvas');const ctx=canvas.getContext('2d');const FONT=16,SPEED=0.33,FADE=0.05;let cols,drops;
+        function rainInit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;cols=Math.floor(canvas.width/FONT);drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);}rainInit();
+        (function draw(){ctx.fillStyle=`rgba(0,0,0,${FADE})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');ctx.font=FONT+'px monospace';for(let i=0;i<cols;i++){const ch=String.fromCharCode(0x30A0+Math.random()*96);const x=i*FONT,y=drops[i]*FONT;ctx.fillText(ch,x,y);drops[i]+=SPEED;if(y>canvas.height&&Math.random()>0.975)drops[i]=0;}requestAnimationFrame(draw);})();
+        window.addEventListener('resize',rainInit);
+      });
     </script>
   </body>
 </html>
