@@ -6,30 +6,25 @@
 
     <title>SURGE‑WebControl</title>
 
-    <!-- Nasalization font primary & self‑hosted fallback -->
+    <!-- Nasalization Font (CDN + fallback) -->
     <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet" />
     <style>
       @font-face {
         font-family: "Nasalization";
         src: url("https://cdn.jsdelivr.net/gh/ejoliet/nasalization/nasalization-rg.woff2") format("woff2"),
              url("https://cdn.jsdelivr.net/gh/ejoliet/nasalization/nasalization-rg.woff")  format("woff");
-        font-weight: normal;
-        font-style: normal;
         font-display: swap;
       }
     </style>
 
-    <!-- Font Awesome -->
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-bugHuflTqEZZ2uRiKqdF6RxQ9WG/jc2LGJtIDiCGk4BmSL7xIuiKdVhK1hO6Jp5ablZGjDVqdDriLetr7vV0Lg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
-      :root {
-        --accent: #24fff4;
-      }
+      :root { --accent: #24fff4; }
 
-      /* --- GLOBAL ---------------------------------------------------- */
-      html,
-      body {
+      /* ---------- GLOBAL ---------- */
+      html, body {
         margin: 0;
         height: 100%;
         background: #000;
@@ -38,24 +33,22 @@
         overflow: hidden;
         -webkit-font-smoothing: antialiased;
       }
-
       .glow {
         text-shadow: 0 0 6px var(--accent), 0 0 14px var(--accent), 0 0 28px var(--accent);
-        letter-spacing: 0.06em;
+        letter-spacing: .06em;
       }
 
-      /* --- DIGITAL RAIN CANVAS -------------------------------------- */
+      /* ---------- CANVAS ---------- */
       #matrixCanvas {
         position: fixed;
-        top: 0;
-        left: 0;
+        inset: 0;
         width: 100%;
         height: 100%;
         pointer-events: none;
         z-index: 0;
       }
 
-      /* --- GLASS CARD ------------------------------------------------ */
+      /* ---------- GLASS COMPONENTS ---------- */
       .glass {
         backdrop-filter: blur(28px) saturate(160%);
         -webkit-backdrop-filter: blur(28px) saturate(160%);
@@ -66,7 +59,6 @@
         z-index: 10;
       }
 
-      /* --- HEADER ---------------------------------------------------- */
       header {
         position: fixed;
         top: 16px;
@@ -77,25 +69,12 @@
         gap: 24px;
         padding: 10px 28px;
       }
-      header h1 {
-        font-size: clamp(1.8rem, 4vw, 3.6rem);
-        margin: 0;
-      }
-      .icons {
-        display: flex;
-        gap: 18px;
-        font-size: 1.4rem;
-      }
-      .icons i {
-        cursor: pointer;
-        transition: transform 0.18s;
-      }
-      .icons i:hover {
-        transform: scale(1.15);
-        color: var(--accent);
-      }
+      header h1 { font-size: clamp(1.8rem, 4vw, 3.6rem); margin: 0; }
+      .icons { display: flex; gap: 18px; font-size: 1.4rem; }
+      .icons i { cursor: pointer; transition: transform .18s; }
+      .icons i:hover { transform: scale(1.15); color: var(--accent); }
 
-      /* --- JOYSTICKS ------------------------------------------------- */
+      /* ---------- JOYSTICKS ---------- */
       .joystick {
         position: fixed;
         width: clamp(120px, 18vw, 200px);
@@ -104,7 +83,7 @@
         touch-action: none;
         overflow: hidden;
       }
-      #left-joystick { bottom: 24px; left: 24px; }
+      #left-joystick  { bottom: 24px; left: 24px; }
       #right-joystick { bottom: 24px; right: 24px; }
 
       .stick {
@@ -116,16 +95,18 @@
         position: absolute;
         top: 50%;
         left: 50%;
-        transform: translate(-50%,-50%);
+        transform: translate(-50%, -50%);
         touch-action: none;
         box-shadow: 0 0 12px 4px var(--accent);
-        transition: transform 0.05s linear;
+        transition: transform .05s linear;
       }
     </style>
   </head>
   <body>
+    <!-- BACKGROUND EFFECT -->
     <canvas id="matrixCanvas"></canvas>
 
+    <!-- HEADER -->
     <header class="glass">
       <h1 class="glow">SURGE‑WebControl</h1>
       <div class="icons">
@@ -134,96 +115,97 @@
       </div>
     </header>
 
+    <!-- JOYSTICKS -->
     <div class="joystick glass" id="left-joystick"><div class="stick" id="left-stick"></div></div>
     <div class="joystick glass" id="right-joystick"><div class="stick" id="right-stick"></div></div>
 
-    <!-- --- SCRIPTS --------------------------------------------------- -->
     <script>
-      /* DIGITAL RAIN -------------------------------------------------- */
-      (function () {
-        const canvas = document.getElementById("matrixCanvas");
-        const ctx = canvas.getContext("2d");
-        const fontSize = 18;
-        let columns, drops;
+      /* -------- DIGITAL RAIN (1/3 speed) -------- */
+      (() => {
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx    = canvas.getContext('2d');
 
-        function resize() {
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-          columns = Math.floor(canvas.width / fontSize);
-          drops = new Array(columns).fill(1);
+        const FONT_SIZE = 16;   // base font size in px
+        const SPEED     = 0.33; // 1/3 original speed (≈ every third frame)
+        let width, height, columns, drops;
+
+        function init() {
+          width  = canvas.width  = window.innerWidth;
+          height = canvas.height = window.innerHeight;
+          columns = Math.floor(width / FONT_SIZE);
+          drops   = new Array(columns).fill(1);
         }
 
         function draw() {
-          // Fade the canvas slightly to create trail effect
-          ctx.fillStyle = "rgba(0,0,0,0.08)";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = 'rgba(0,0,0,0.05)';
+          ctx.fillRect(0, 0, width, height);
 
-          ctx.fillStyle = "#24fff4";
-          ctx.font = fontSize + "px monospace";
+          ctx.fillStyle = '#24fff4';
+          ctx.font      = FONT_SIZE + 'px monospace';
 
-          for (let i = 0; i < drops.length; i++) {
-            const text = String.fromCharCode(0x30A0 + Math.random() * 96);
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-              drops[i] = 0;
-            }
-            drops[i]++;
+          for (let i = 0; i < columns; i++) {
+            const char = String.fromCharCode(0x30A0 + Math.random() * 96);
+            const x = i * FONT_SIZE;
+            const y = drops[i] * FONT_SIZE;
+            ctx.fillText(char, x, y);
+
+            drops[i] += SPEED; // slow fall
+            if (y > height && Math.random() > 0.975) drops[i] = 0;
           }
-
           requestAnimationFrame(draw);
         }
 
-        resize();
-        requestAnimationFrame(draw);
-        window.addEventListener("resize", resize);
+        init();
+        draw();
+        window.addEventListener('resize', init);
       })();
 
-      /* JOYSTICK ------------------------------------------------------ */
+      /* ---------------- JOYSTICKS ---------------- */
       function initJoystick(joyId, stickId) {
-        const joy = document.getElementById(joyId);
+        const joy   = document.getElementById(joyId);
         const stick = document.getElementById(stickId);
-        const JOY_LIMIT = 0.4; // 40 % radius
-        let activeId = null;
+        const LIMIT = 0.4; // fraction of radius
+        let active  = null;
 
         const center = () => {
           const r = joy.getBoundingClientRect();
-          return { x: r.left + r.width / 2, y: r.top + r.height / 2, max: (r.width / 2) * JOY_LIMIT };
+          return { x: r.left + r.width / 2, y: r.top + r.height / 2, max: (r.width / 2) * LIMIT };
         };
 
-        joy.addEventListener("touchstart", e => {
+        joy.addEventListener('touchstart', e => {
           for (const t of e.changedTouches) {
-            if (joy.contains(t.target) && activeId === null) activeId = t.identifier;
+            if (joy.contains(t.target) && active === null) active = t.identifier;
           }
         });
 
-        joy.addEventListener("touchmove", e => {
+        joy.addEventListener('touchmove', e => {
           for (const t of e.touches) {
-            if (t.identifier === activeId) {
+            if (t.identifier === active) {
               const c = center();
               let dx = t.clientX - c.x;
               let dy = t.clientY - c.y;
               const dist = Math.min(Math.hypot(dx, dy), c.max);
-              const ang = Math.atan2(dy, dx);
+              const ang  = Math.atan2(dy, dx);
               dx = dist * Math.cos(ang);
               dy = dist * Math.sin(ang);
               stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-              // send via Bluetooth here
+              // TODO: send via Bluetooth
             }
           }
         });
 
-        joy.addEventListener("touchend", e => {
+        joy.addEventListener('touchend', e => {
           for (const t of e.changedTouches) {
-            if (t.identifier === activeId) {
-              activeId = null;
-              stick.style.transform = "translate(-50%, -50%)";
+            if (t.identifier === active) {
+              active = null;
+              stick.style.transform = 'translate(-50%, -50%)';
             }
           }
         });
       }
 
-      initJoystick("left-joystick", "left-stick");
-      initJoystick("right-joystick", "right-stick");
+      initJoystick('left-joystick',  'left-stick');
+      initJoystick('right-joystick', 'right-stick');
     </script>
   </body>
 </html>
