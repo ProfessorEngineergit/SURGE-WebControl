@@ -93,19 +93,20 @@
         justify-content:center
       }
       .joystick-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;backdrop-filter:inherit;-webkit-backdrop-filter:inherit;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;} /* touch-action:none ist wichtig für Joystick */
+      .joystick{position:relative;width:64%;aspect-ratio:1;border-radius:50%;touch-action:none;} 
       .stick{--size:70%;width:var(--size);height:var(--size);background:var(--glow);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 20px 8px var(--glow);transition:transform .05s linear}
       
       #speedbar{
         position:relative;
         display:inline-block; 
+        touch-action: none; /* Wichtig für Slider-Touch-Interaktion */
       }
       .speed-block{
         border-radius:6px;background:var(--speed-gray);transition:background .15s;
         transform-origin: bottom left; 
       }
       .speed-block.active{background:var(--speed-red)}
-      #speed-thumb{position:absolute;width:6px;height:28px;background:#bbb;border-radius:3px;transition:transform .15s;transform-origin: center center;}
+      #speed-thumb{position:absolute;width:6px;height:28px;background:#bbb;border-radius:3px;transition:transform .15s;transform-origin: center center; touch-action: none;}
       #drag-arrow{position:absolute;font-size:14px;color:#aaa;animation:bounce 1.2s infinite ease-in-out;transform-origin:center bottom; display: none;}
       @keyframes bounce{0%,100%{transform:translate(-50%, -50%) translateY(0) scaleY(1)}50%{transform:translate(-50%, -50%) translateY(-8px) scaleY(1.3)}}
     </style>
@@ -202,39 +203,39 @@
             speedBar.style.height = '0px';
         }
         
-        function blockCenters(){return blocks.map(b=>{const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}});}   
-        let snapIndex=-1; 
-        let drag=false; 
+        // --- SLIDER LOGIC ---
+        let sliderSnapIndex=-1; 
+        let sliderActiveTouchId = null;
+        let sliderMouseDragging = false;
 
         function updateArrowVisibility() {
-            if (drag === false && snapIndex === 0 && blocks.length > 0) { 
+            if (sliderActiveTouchId === null && !sliderMouseDragging && sliderSnapIndex === 0 && blocks.length > 0) { 
                 arrow.style.display = 'block';
             } else {
                 arrow.style.display = 'none';
             }
         }
 
-        function snap(i){
-          if (i < 0 || i >= blocks.length) return; 
-          snapIndex=i;
-          blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=i));
+        function sliderSnapTo(index) {
+          if (index < 0 || index >= blocks.length) return; 
+          sliderSnapIndex = index;
+          blocks.forEach((b,idx)=>b.classList.toggle('active',idx<=index));
           updateArrowVisibility();
 
-          const currentBlock = blocks[i];
+          const currentBlock = blocks[index];
           const blockRect = currentBlock.getBoundingClientRect();
           const speedBarRect = speedBar.getBoundingClientRect();
           const blockRotation = parseFloat(currentBlock.dataset.rotation) || 0;
           const thumbActualHeight = thumb.offsetHeight; 
           const spacing = 10; 
-          let thumbTargetX, thumbTargetY; let thumbAngle = blockRotation;
+          let thumbTargetX, thumbTargetY; 
 
           if (blockRotation === 0) { 
             thumbTargetX = (blockRect.right - speedBarRect.left) + spacing + (thumbActualHeight / 2); 
             thumbTargetY = (blockRect.top - speedBarRect.top) + blockRect.height / 2; 
-            thumbAngle = 0; 
           } 
-          
-          thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(${thumbAngle}deg)`;
+          // Anmerkung: thumbAngle wird nicht mehr gesetzt, da der Daumen immer 0 Grad hat
+          thumb.style.transform = `translate(calc(${thumbTargetX}px - 50%), calc(${thumbTargetY}px - 50%)) rotate(0deg)`;
           
           if (arrow.style.display === 'block') {
             let arrowX = thumbTargetX; 
@@ -249,50 +250,53 @@
           }
         }
 
-        function closest(x,y){if(blocks.length===0) return -1; const cs=blockCenters();let m=1e9,idx=0;cs.forEach((c,i)=>{const d=(c.x-x)**2+(c.y-y)**2;if(d<m){m=d;idx=i}});return idx;}
-        
-        function startDrag(e) { 
-            if(blocks.length===0) return; 
-            drag=true;
-            arrow.style.display='none'; 
-            moveDrag(e); 
-            e.preventDefault();
+        function getClosestBlockIndex(clientX, clientY) {
+            if(blocks.length===0) return -1; 
+            const blockRects = blocks.map(b => b.getBoundingClientRect());
+            let minDistance = Infinity;
+            let closestIndex = 0;
+            blockRects.forEach((rect, i) => {
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const distance = Math.hypot(clientX - centerX, clientY - centerY);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestIndex = i;
+                }
+            });
+            return closestIndex;
         }
-        function endDrag() {
-            if(blocks.length===0) return; 
-            drag=false; 
-            updateArrowVisibility(); 
-        }
-        function moveDrag(e) {
-            if(!drag || blocks.length===0)return;
-            const t=e.touches?e.touches[0]:e;
-            const i=closest(t.clientX,t.clientY);
-            if(i!==snapIndex && i !== -1)snap(i); 
-            e.preventDefault();
-        }  
         
-        thumb.addEventListener('mousedown',startDrag);
-        speedBar.addEventListener('mousedown',startDrag);
-        window.addEventListener('mousemove',moveDrag);
-        window.addEventListener('mouseup',endDrag);
-        thumb.addEventListener('touchstart',startDrag,{passive:false});
-        speedBar.addEventListener('touchstart',startDrag,{passive:false});
-        window.addEventListener('touchmove',moveDrag,{passive:false});
-        window.addEventListener('touchend',endDrag);
-        
-        if (blocks.length > 0) {
-            snap(0); 
-        } else { 
-            thumb.style.display = 'none'; 
-            arrow.style.display = 'none'; 
+        function handleSliderTouchStart(e) {
+            if (blocks.length === 0 || sliderActiveTouchId !== null) return;
+            // e.preventDefault(); // Wird vom window handler gemacht, falls nötig
+            const touch = e.changedTouches[0];
+            sliderActiveTouchId = touch.identifier;
+            arrow.style.display = 'none';
+            const closestIndex = getClosestBlockIndex(touch.clientX, touch.clientY);
+            if (closestIndex !== -1 && closestIndex !== sliderSnapIndex) {
+                sliderSnapTo(closestIndex);
+            }
         }
 
-        /* === JOYSTICK === */
+        function handleSliderMouseDown(e) {
+            if (blocks.length === 0) return;
+            e.preventDefault();
+            sliderMouseDragging = true;
+            arrow.style.display = 'none';
+            const closestIndex = getClosestBlockIndex(e.clientX, e.clientY);
+             if (closestIndex !== -1 && closestIndex !== sliderSnapIndex) {
+                sliderSnapTo(closestIndex);
+            }
+        }
+        
+        // --- JOYSTICK LOGIC ---
         const joy = document.getElementById('right-joystick'); 
         const stick = document.getElementById('right-stick');  
-        let activeTouchId = null; 
+        let joystickActiveTouchId = null; 
+        let joystickMouseDragging = false;
 
-        const ctr = () => {
+        const getJoystickCenterAndMax = () => {
             const joyRect = joy.getBoundingClientRect(); 
             const stickRect = stick.getBoundingClientRect(); 
             const joyRadius = joyRect.width / 2;
@@ -305,8 +309,8 @@
             };
         };
 
-        const mv = (clientX, clientY) => { 
-            const c = ctr();
+        const moveJoystick = (clientX, clientY) => { 
+            const c = getJoystickCenterAndMax();
             let dx = clientX - c.x;
             let dy = clientY - c.y;
             const dist = Math.min(Math.hypot(dx, dy), c.max); 
@@ -317,60 +321,100 @@
         };
         
         joy.addEventListener('touchstart', e => {
-            e.preventDefault(); 
-            for (const touch of e.changedTouches) {
-                if (activeTouchId === null) { 
-                    activeTouchId = touch.identifier; 
-                    mv(touch.clientX, touch.clientY); 
-                    break; 
-                }
+            // e.preventDefault(); // Wird vom window handler gemacht, falls nötig
+            if (joystickActiveTouchId === null) {
+                const touch = e.changedTouches[0];
+                joystickActiveTouchId = touch.identifier; 
+                moveJoystick(touch.clientX, touch.clientY); 
             }
         }, { passive: false });
+      
+        joy.addEventListener('mousedown', e => {
+            e.preventDefault();
+            joystickMouseDragging = true;
+            moveJoystick(e.clientX, e.clientY); 
+        });
 
+        // --- GLOBAL EVENT HANDLERS FOR MOVEMENT AND END ---
         window.addEventListener('touchmove', e => {
-            if (activeTouchId !== null) { 
-                for (const touch of e.touches) { 
-                    if (touch.identifier === activeTouchId) { 
-                        mv(touch.clientX, touch.clientY);
-                        e.preventDefault(); 
+            let handled = false;
+            if (sliderActiveTouchId !== null) {
+                for (const touch of e.changedTouches) {
+                    if (touch.identifier === sliderActiveTouchId) {
+                        const closestIndex = getClosestBlockIndex(touch.clientX, touch.clientY);
+                        if (closestIndex !== -1 && closestIndex !== sliderSnapIndex) {
+                           sliderSnapTo(closestIndex);
+                        }
+                        handled = true;
+                        break;
+                    }
+                }
+            }
+            if (joystickActiveTouchId !== null) {
+                for (const touch of e.changedTouches) { 
+                    if (touch.identifier === joystickActiveTouchId) { 
+                        moveJoystick(touch.clientX, touch.clientY);
+                        handled = true;
                         break; 
                     }
                 }
             }
+            if (handled) {
+                e.preventDefault(); // Nur preventDefault, wenn einer unserer Controller den Touch verarbeitet
+            }
         }, { passive: false });
 
-        function handleTouchEndOrCancel(e) {
-            for (const touch of e.changedTouches) {
-                if (touch.identifier === activeTouchId) { 
-                    activeTouchId = null; 
-                    stick.style.transform = 'translate(-50%,-50%)'; 
-                    break;
-                }
-            }
-        }
-
-        window.addEventListener('touchend', handleTouchEndOrCancel);
-        window.addEventListener('touchcancel', handleTouchEndOrCancel); 
-        
-        joy.addEventListener('mousedown', e => {
-            activeTouchId = 'mouse'; 
-            mv(e.clientX, e.clientY); 
-            e.preventDefault();
-        });
-
         window.addEventListener('mousemove', e => {
-            if (activeTouchId === 'mouse') { 
-                mv(e.clientX, e.clientY); 
+            let handled = false;
+            if (sliderMouseDragging) {
+                const closestIndex = getClosestBlockIndex(e.clientX, e.clientY);
+                if (closestIndex !== -1 && closestIndex !== sliderSnapIndex) {
+                    sliderSnapTo(closestIndex);
+                }
+                handled = true;
+            }
+            if (joystickMouseDragging) { 
+                moveJoystick(e.clientX, e.clientY); 
+                handled = true;
+            }
+            if (handled) {
                 e.preventDefault();
             }
         });
 
+        function handleGlobalTouchEnd(e) {
+            for (const touch of e.changedTouches) {
+                if (touch.identifier === sliderActiveTouchId) {
+                    sliderActiveTouchId = null;
+                    updateArrowVisibility();
+                }
+                if (touch.identifier === joystickActiveTouchId) { 
+                    joystickActiveTouchId = null; 
+                    stick.style.transform = 'translate(-50%,-50%)'; 
+                }
+            }
+        }
+        window.addEventListener('touchend', handleGlobalTouchEnd);
+        window.addEventListener('touchcancel', handleGlobalTouchEnd); 
+        
         window.addEventListener('mouseup', () => {
-            if (activeTouchId === 'mouse') {
-                activeTouchId = null;
+            if (sliderMouseDragging) {
+                sliderMouseDragging = false;
+                updateArrowVisibility();
+            }
+            if (joystickMouseDragging) {
+                joystickMouseDragging = false;
                 stick.style.transform = 'translate(-50%,-50%)';
             }
         });
+
+        // Initialisierung
+        if (blocks.length > 0) {
+            sliderSnapTo(0); 
+        } else { 
+            thumb.style.display = 'none'; 
+            arrow.style.display = 'none'; 
+        }
 
         /* === DIGITAL RAIN === */
         const canvas=document.getElementById('matrixCanvas');const ctx=canvas.getContext('2d');const FONT=16,SPEED=0.33,FADE=0.05;let cols,drops;function rainInit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;cols=Math.floor(canvas.width/FONT);drops=Array.from({length:cols},()=>Math.random()*canvas.height/FONT);}rainInit();(function draw(){ctx.fillStyle=`rgba(0,0,0,${FADE})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--matrix');ctx.font=FONT+'px monospace';for(let i=0;i<cols;i++){const ch=String.fromCharCode(0x30A0+Math.random()*96);const x=i*FONT,y=drops[i]*FONT;ctx.fillText(ch,x,y);drops[i]+=SPEED;if(y>canvas.height&&Math.random()>0.975)drops[i]=0;}requestAnimationFrame(draw);})();window.addEventListener('resize',rainInit);
