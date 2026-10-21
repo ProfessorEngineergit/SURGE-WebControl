@@ -1,34 +1,21 @@
 # SURGE Web Control
 
-Welcome to the SURGE Web Control repository! This project is designed to help users manage and monitor Surge devices effectively.
+Static browser prototype for a robot-control interface with an on-screen joystick, speed control and gamepad input.
 
-## Features
-- User-friendly interface for managing Surge devices
-- Real-time monitoring of device status
-- Easy deployment and configuration
+## Current status
 
-## Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ProfessorEngineergit/SURGE-WebControl.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd SURGE-WebControl
-   ```
-3. Install the necessary dependencies:
-   ```bash
-   npm install
-   ```
+The application is contained in `index.html`. The gamepad loop calculates left and right wheel speeds and writes them to the browser console. Robot transport is a placeholder: this branch does not send those values to a JetBot or another device, and it does not implement live device telemetry.
 
-## Usage
-To start the application, run:
-```bash
-npm start
+## Preview
+
+```sh
+python3 -m http.server 8080
 ```
 
-## Contributing
-We welcome contributions! Please read our [contributing guidelines](CONTRIBUTING.md) before submitting pull requests.
+Open `http://localhost:8080` and connect a browser-compatible gamepad to exercise the input handling. External font and icon resources require a network connection.
+
+There is no `package.json`, npm install step or npm start script in this repository. Browser/gamepad support and a real transport adapter should be tested before connecting hardware.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+See [LICENSE](LICENSE), which contains the GNU GPL version 3 text.
